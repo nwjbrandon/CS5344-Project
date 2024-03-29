@@ -65,18 +65,18 @@ class MovieLens20m:
     def get_rating_statistics(self):
         return self.n_rating_statistics
     
-    def rank_movies_by_number_of_rating(self, min_n_rating: Optional[int] = 0):
-        popular_movies_df = self.preprocess_movies_df(min_n_rating)
+    def rank_movies_by_number_of_rating(self, min_n_rating_threshold: Optional[int] = 0):
+        popular_movies_df = self.preprocess_movies_df(min_n_rating_threshold)
         popular_movies_by_number_of_ratings_df = popular_movies_df.sort(F.desc("n_rating"))
         return popular_movies_by_number_of_ratings_df
 
-    def rank_movies_by_average_rating(self, min_n_rating: Optional[int] = None):
-        popular_movies_df = self.preprocess_movies_df(min_n_rating)
+    def rank_movies_by_average_rating(self, min_n_rating_threshold: Optional[int] = None):
+        popular_movies_df = self.preprocess_movies_df(min_n_rating_threshold)
         popular_movies_by_average_ratings_df = popular_movies_df.sort(F.desc("avg_rating"))
         return popular_movies_by_average_ratings_df
 
-    def rank_movies_by_std_rating(self, min_n_rating: Optional[int] = None):
-        popular_movies_df = self.preprocess_movies_df(min_n_rating)
+    def rank_movies_by_std_rating(self, min_n_rating_threshold: Optional[int] = None):
+        popular_movies_df = self.preprocess_movies_df(min_n_rating_threshold)
         popular_movies_by_std_ratings_df = popular_movies_df\
             .filter(self.popular_movies_df.std_rating != np.nan)\
             .sort(F.desc("std_rating"))
@@ -95,18 +95,13 @@ if __name__ == "__main__":
     # Compute rating statistics to understand the skew in the number of ratings
     n_rating_statistics = movielens20m.get_rating_statistics()
     print("n_rating_statistics:", n_rating_statistics)
+    min_n_rating_threshold = n_rating_statistics["n_rating_75_percentile"]
 
     # Rank popular movies by the number of ratings
-    movielens20m.rank_movies_by_number_of_rating(
-        min_n_rating=n_rating_statistics["n_rating_75_percentile"]
-    ).show(10)
+    movielens20m.rank_movies_by_number_of_rating(min_n_rating_threshold=min_n_rating_threshold).show(10)
 
     # Rank popular movies by the average ratings
-    movielens20m.rank_movies_by_average_rating(
-        min_n_rating=n_rating_statistics["n_rating_75_percentile"]
-    ).show(10)
+    movielens20m.rank_movies_by_average_rating(min_n_rating_threshold=min_n_rating_threshold).show(10)
 
     # Rank popular movies that has polarized ratings
-    movielens20m.rank_movies_by_std_rating(
-        min_n_rating=n_rating_statistics["n_rating_75_percentile"]
-    ).show(10)
+    movielens20m.rank_movies_by_std_rating(min_n_rating_threshold=min_n_rating_threshold).show(10)
