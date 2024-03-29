@@ -1,4 +1,7 @@
 import os
+
+import numpy as np
+
 from pyspark.sql import SparkSession
 import pyspark.sql.functions as F
 
@@ -19,10 +22,14 @@ class MovieLens20m:
         return self.ratings_df
 
     def compute_movie_popularity(self):
-        popular_movies_df = self.ratings_df.groupBy("movieId").agg(F.count("userId"), F.avg("rating")).withColumnRenamed("count(userId)", "n_ratings").withColumnRenamed("avg(rating)", "avg_rating")
+        popular_movies_df = self.ratings_df.groupBy("movieId")\
+            .agg(F.count("userId"), F.avg("rating"), F.stddev("rating"))\
+            .withColumnRenamed("count(userId)", "n_ratings")\
+            .withColumnRenamed("avg(rating)", "avg_rating")\
+            .withColumnRenamed("stddev_samp(rating)", "std_rating")
         popular_movies_df = popular_movies_df.join(self.movies_df, popular_movies_df.movieId == self.movies_df.movieId)
         return popular_movies_df
-    
+
     def get_number_of_rating_statistics(self):
         return self.popular_movies_df.select([F.mean('n_ratings'), F.min('n_ratings'), F.max('n_ratings')])
 
@@ -37,6 +44,10 @@ class MovieLens20m:
         popular_movies_by_average_ratings_df = self.popular_movies_df.sort(F.desc("avg_rating"))
         return popular_movies_by_average_ratings_df
 
+    def rank_movies_by_std_ratings(self):
+        popular_movies_by_std_ratings_df = self.popular_movies_df.filter(self.popular_movies_df.std_rating != np.nan).sort(F.desc("std_rating"))
+        return popular_movies_by_std_ratings_df
+
 if __name__ == "__main__":
     spark = SparkSession.builder.appName("Lab2").getOrCreate()
     movielens20m = MovieLens20m(spark=spark)
@@ -44,3 +55,4 @@ if __name__ == "__main__":
     movielens20m.get_average_rating_statistics().show(10)
     movielens20m.rank_movies_by_number_of_ratings().show(10)
     movielens20m.rank_movies_by_average_ratings().show(10)
+    movielens20m.rank_movies_by_std_ratings().show(10)
