@@ -5,6 +5,24 @@ import numpy as np
 
 from pyspark.sql import SparkSession
 import pyspark.sql.functions as F
+from pyspark.sql.types import FloatType, IntegerType, StringType, StructField, StructType
+
+schema_ratings = StructType(
+    [
+        StructField("userId", IntegerType(), False),
+        StructField("movieId", IntegerType(), False),
+        StructField("rating", FloatType(), True),
+        StructField("timestamp", StringType(), True),
+    ]
+)
+
+schema_movies = StructType(
+    [
+        StructField("movieId", IntegerType(), False),
+        StructField("title", StringType(), True),
+        StructField("genres", StringType(), True),
+    ]
+)
 
 class MovieLens20m:
     def __init__(self, spark, data_dir: str = "ml-20m") -> None:
@@ -13,8 +31,8 @@ class MovieLens20m:
         self.ratings_fname = os.path.join(data_dir, "ratings.csv")
 
         # Load datasets
-        self.movies_df = self.spark.read.option("header", True).csv(self.movie_fname)
-        self.ratings_df = self.spark.read.option("header", True).csv(self.ratings_fname)
+        self.movies_df = self.spark.read.option("header", True).schema(schema_movies).csv(self.movie_fname)
+        self.ratings_df = self.spark.read.option("header", True).schema(schema_ratings).csv(self.ratings_fname)
 
         # Compute movie popularity and rating statistics
         self.popular_movies_df = self.compute_movie_popularity()
