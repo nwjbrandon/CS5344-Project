@@ -1,6 +1,8 @@
 .DS_Store
 ml-20m.zip
+*.log
 
 __pycache__/
 ml-20m/
 scripts/
+metastore_db/
