@@ -106,12 +106,11 @@ class MovieLens20m:
         else:
             return self.popular_movies_df.filter(self.popular_movies_df.n_rating >= min_n_rating_threshold)
 
-if __name__ == "__main__":
-    spark = SparkSession.builder.appName("CS5344 Project").getOrCreate()
-    movielens20m = MovieLens20m(spark=spark)
 
+def recommend_movies_by_popularity(movielens20m):
     # Compute rating statistics to understand the skew in the number of ratings
     n_rating_statistics = movielens20m.get_rating_statistics()
+
     print("n_rating_statistics:", n_rating_statistics)
     min_n_rating_threshold = n_rating_statistics["n_rating_75_percentile"]
 
@@ -123,3 +122,10 @@ if __name__ == "__main__":
 
     # Rank popular movies that has polarized ratings
     movielens20m.rank_movies_by_std_rating(min_n_rating_threshold=min_n_rating_threshold).show(10)
+
+
+if __name__ == "__main__":
+    spark = SparkSession.builder.appName("CS5344 Project").getOrCreate()
+    movielens20m = MovieLens20m(spark=spark)
+
+    recommend_movies_by_popularity(movielens20m)
