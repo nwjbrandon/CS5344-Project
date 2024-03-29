@@ -6,6 +6,11 @@ import numpy as np
 from pyspark.sql import SparkSession
 import pyspark.sql.functions as F
 from pyspark.sql.types import FloatType, IntegerType, StringType, StructField, StructType
+from pyspark.ml.recommendation import ALS
+from pyspark.ml.evaluation import RegressionEvaluator
+
+
+SEED = 42
 
 schema_ratings = StructType(
     [
@@ -24,6 +29,7 @@ schema_movies = StructType(
     ]
 )
 
+
 class MovieLens20m:
     def __init__(self, spark, data_dir: str = "ml-20m") -> None:
         self.spark = spark
@@ -36,13 +42,16 @@ class MovieLens20m:
 
         # Compute movie popularity and rating statistics
         self.popular_movies_df = self.compute_movie_popularity()
-        self.n_rating_statistics = self.compute_rating_statistics()
+        self.rating_statistics = self.compute_rating_statistics()
 
     def get_movies_df(self):
         return self.movies_df
     
     def get_ratings_df(self):
         return self.ratings_df
+
+    def get_popular_movies_df(self):
+        return self.popular_movies_df
 
     def compute_movie_popularity(self):
         popular_movies_df = self.ratings_df.groupBy("movieId")\
@@ -81,7 +90,7 @@ class MovieLens20m:
         }
     
     def get_rating_statistics(self):
-        return self.n_rating_statistics
+        return self.rating_statistics
     
     def rank_movies_by_number_of_rating(self, min_n_rating_threshold: Optional[int] = 0):
         popular_movies_df = self.preprocess_movies_df(min_n_rating_threshold)
@@ -107,12 +116,45 @@ class MovieLens20m:
             return self.popular_movies_df.filter(self.popular_movies_df.n_rating >= min_n_rating_threshold)
 
 
-def recommend_movies_by_popularity(movielens20m):
-    # Compute rating statistics to understand the skew in the number of ratings
-    n_rating_statistics = movielens20m.get_rating_statistics()
+class MatrixFactorization:
+    def __init__(self, user_col: str = "userId", item_col: str = "movieId", rating_col: str = "rating", rank: int = 5, max_iter: int = 10, seed: int = SEED) -> None:
+        self.user_col = user_col
+        self.item_col = item_col
+        self.rating_col = rating_col
+        self.rank = rank
+        self.max_iter = max_iter
+        self.seed = seed
+        self.prediction_col = "prediction"
 
-    print("n_rating_statistics:", n_rating_statistics)
-    min_n_rating_threshold = n_rating_statistics["n_rating_75_percentile"]
+        self.als = ALS(rank=self.rank, maxIter=self.max_iter, seed=self.seed, userCol=self.user_col, itemCol=self.item_col, ratingCol=self.rating_col)
+        self.model = None
+        self.evaluator = RegressionEvaluator(predictionCol=self.prediction_col, labelCol=self.rating_col, metricName="rmse")
+
+    def preprocess(self, df, min_n_rating_threshold: Optional[int] = 0):
+        # Remove movie with few number of ratings
+        n_rating_df = df.groupBy(self.item_col).agg(F.count(self.user_col).alias("n_rating"))
+        df = df.join(n_rating_df, [self.item_col])
+        df = df.filter(df.n_rating >= min_n_rating_threshold)
+        return df
+
+    def fit(self, df):
+        self.model = self.als.fit(df.select([self.user_col, self.item_col, self.rating_col]))
+
+    def predict(self, df):
+        predictions = self.model.transform(df.select([self.user_col, self.item_col]))
+        predictions = predictions.join(df, [self.user_col, self.item_col])
+        return predictions
+
+    def evaluate(self, df):
+        return self.evaluator.evaluate(df)
+
+
+def recommend_movies_by_popularity(movielens20m: MovieLens20m):
+    # Compute rating statistics to understand the skew in the number of ratings
+    rating_statistics = movielens20m.get_rating_statistics()
+
+    print("rating_statistics:", rating_statistics)
+    min_n_rating_threshold = rating_statistics["n_rating_75_percentile"]
 
     # Rank popular movies by the number of ratings
     movielens20m.rank_movies_by_number_of_rating(min_n_rating_threshold=min_n_rating_threshold).show(10)
@@ -124,8 +166,29 @@ def recommend_movies_by_popularity(movielens20m):
     movielens20m.rank_movies_by_std_rating(min_n_rating_threshold=min_n_rating_threshold).show(10)
 
 
+def recommend_movies_by_matrix_factorization(movielens20m: MovieLens20m):
+    ratings_df = movielens20m.get_ratings_df()
+    rating_statistics = movielens20m.get_rating_statistics()
+    min_n_rating_threshold = rating_statistics["n_rating_50_percentile"]
+
+    mf = MatrixFactorization()
+    ratings_df = mf.preprocess(ratings_df, min_n_rating_threshold=min_n_rating_threshold)
+
+    train, test = ratings_df.randomSplit([0.9, 0.1], seed=SEED)
+    mf.fit(train)
+    predictions = mf.predict(test)
+
+    # NOTE: Filter rows where users or items does not exist in the train set
+    predictions = predictions.filter(predictions.prediction != np.nan)
+    predictions.show(10)
+
+    rmse = mf.evaluate(predictions)
+    print("RMSE:", rmse) # 0.8165847881901006
+
+
 if __name__ == "__main__":
     spark = SparkSession.builder.appName("CS5344 Project").getOrCreate()
     movielens20m = MovieLens20m(spark=spark)
 
     recommend_movies_by_popularity(movielens20m)
+    recommend_movies_by_matrix_factorization(movielens20m)
