@@ -1,4 +1,5 @@
 import os
+from typing import Optional
 
 import numpy as np
 
@@ -64,26 +65,48 @@ class MovieLens20m:
     def get_statistics_for_number_of_rating(self):
         return self.n_rating_statistics
     
-    def rank_movies_by_number_of_ratings(self):
-        popular_movies_by_number_of_ratings_df = self.popular_movies_df.sort(F.desc("n_rating"))
+    def rank_movies_by_number_of_ratings(self, min_n_rating: Optional[int] = 0):
+        popular_movies_df = self.filter_movies_with_min_n_rating(min_n_rating)
+        popular_movies_by_number_of_ratings_df = popular_movies_df.sort(F.desc("n_rating"))
         return popular_movies_by_number_of_ratings_df
 
-    def rank_movies_by_average_ratings(self):
-        popular_movies_by_average_ratings_df = self.popular_movies_df.sort(F.desc("avg_rating"))
+    def rank_movies_by_average_ratings(self, min_n_rating: Optional[int] = None):
+        popular_movies_df = self.filter_movies_with_min_n_rating(min_n_rating)
+        popular_movies_by_average_ratings_df = popular_movies_df.sort(F.desc("avg_rating"))
         return popular_movies_by_average_ratings_df
 
-    def rank_movies_by_std_ratings(self):
-        popular_movies_by_std_ratings_df = self.popular_movies_df.filter(
-            self.popular_movies_df.std_rating != np.nan).sort(F.desc("std_rating")
-        )
+    def rank_movies_by_std_ratings(self, min_n_rating: Optional[int] = None):
+        popular_movies_df = self.filter_movies_with_min_n_rating(min_n_rating)
+        popular_movies_by_std_ratings_df = popular_movies_df\
+            .filter(self.popular_movies_df.std_rating != np.nan)\
+            .sort(F.desc("std_rating"))
         return popular_movies_by_std_ratings_df
+    
+    def filter_movies_with_min_n_rating(self, min_n_rating: Optional[int] = 0):
+        if min_n_rating == 0:
+            return self.popular_movies_df
+        else:
+            return self.popular_movies_df.filter(self.popular_movies_df.n_rating >= min_n_rating)
 
 if __name__ == "__main__":
     spark = SparkSession.builder.appName("Project").getOrCreate()
     movielens20m = MovieLens20m(spark=spark)
+
+    # Compute rating statistics to understand the skew in the number of ratings
     n_rating_statistics = movielens20m.get_statistics_for_number_of_rating()
     print("n_rating_statistics:", n_rating_statistics)
 
-    movielens20m.rank_movies_by_number_of_ratings().show(10)
-    movielens20m.rank_movies_by_average_ratings().show(10)
-    movielens20m.rank_movies_by_std_ratings().show(10)
+    # Rank popular movies by the number of ratings
+    movielens20m.rank_movies_by_number_of_ratings(
+        min_n_rating=n_rating_statistics["n_rating_75_percentile"]
+    ).show(10)
+
+    # Rank popular movies by the average ratings
+    movielens20m.rank_movies_by_average_ratings(
+        min_n_rating=n_rating_statistics["n_rating_75_percentile"]
+    ).show(10)
+
+    # Rank popular movies that has polarized ratings
+    movielens20m.rank_movies_by_std_ratings(
+        min_n_rating=n_rating_statistics["n_rating_75_percentile"]
+    ).show(10)
