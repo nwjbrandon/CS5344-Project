@@ -10,6 +10,10 @@
 ```
 bash env.sh
 ```
+- Install additional dependencies inside docker container bash shell
+```
+pip install numpy
+```
 
 ## Run PySpark
 - Run application
