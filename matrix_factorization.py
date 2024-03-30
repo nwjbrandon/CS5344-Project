@@ -2,12 +2,12 @@ from typing import Optional
 
 import numpy as np
 import pyspark.sql.functions as F
-from pyspark.ml.evaluation import RegressionEvaluator
 from pyspark.ml.recommendation import ALS
 from pyspark.sql import SparkSession
 
 from constant import RANDOM_SEED
 from dataset import MovieLens20m
+from evaluator import Evaluator
 
 
 class MatrixFactorization:
@@ -37,7 +37,6 @@ class MatrixFactorization:
             ratingCol=self.rating_col,
         )
         self.model = None
-        self.evaluator = RegressionEvaluator(predictionCol=self.prediction_col, labelCol=self.rating_col, metricName="rmse")
 
     def preprocess(self, df, min_n_rating_threshold: Optional[int] = 0):
         # Remove movie with few number of ratings
@@ -54,15 +53,16 @@ class MatrixFactorization:
         predictions = predictions.join(df, [self.user_col, self.item_col])
         return predictions
 
-    def evaluate(self, df):
-        return self.evaluator.evaluate(df)
+    def evaluate(self, df, movielens20m: MovieLens20m):
+        evaluator = Evaluator(df, movielens20m)
+        return evaluator.evaluate()
 
 
-def recommend_movies_by_matrix_factorization(movielens20m: MovieLens20m, threshold=3.5):
+def recommend_movies_by_matrix_factorization(movielens20m: MovieLens20m, min_n_rating_threshold=18):
     ratings_df = movielens20m.get_ratings_df()
 
     mf = MatrixFactorization()
-    ratings_df = mf.preprocess(ratings_df, min_n_rating_threshold=200)
+    ratings_df = mf.preprocess(ratings_df, min_n_rating_threshold=min_n_rating_threshold)
 
     train, test = ratings_df.randomSplit([0.9, 0.1], seed=RANDOM_SEED)
     mf.fit(train)
@@ -71,25 +71,13 @@ def recommend_movies_by_matrix_factorization(movielens20m: MovieLens20m, thresho
     # Filter rows where predictions are not NaN
     valid_predictions = predictions.filter(predictions.prediction != np.nan)
 
-    # Calculate Hit Rate
-    hits = valid_predictions.filter(valid_predictions.rating >= threshold).filter(valid_predictions.prediction >= threshold).count()
-    total = valid_predictions.count()
-    hit_rate = hits / total if total > 0 else 0
-
-    # Calculate Coverage
-    unique_recommended = valid_predictions.select("movieId").distinct().count()
-    total_movies = movielens20m.get_movies_df().select("movieId").distinct().count()
-    coverage = unique_recommended / total_movies if total_movies > 0 else 0
-
-    valid_predictions.show(10)
-
-    rmse = mf.evaluate(valid_predictions)
-    print("RMSE:", rmse)  # 0.8165847881901006
-    print(f"Hit Rate: {hit_rate}")
-    print(f"Coverage: {coverage}")
+    scores = mf.evaluate(valid_predictions, movielens20m)
+    print(scores)  # {'rmse': 0.8165847881901005, 'hit_rate': 0.40415162228417006, 'coverage': 0.485996040765452}
 
 
 if __name__ == "__main__":
     spark = SparkSession.builder.appName("CS5344 Project Matrix Factorization").getOrCreate()
     movielens20m = MovieLens20m(spark=spark)
-    recommend_movies_by_matrix_factorization(movielens20m, threshold=3.5)
+
+    n_rating_50_percentile = 18
+    recommend_movies_by_matrix_factorization(movielens20m, min_n_rating_threshold=n_rating_50_percentile)

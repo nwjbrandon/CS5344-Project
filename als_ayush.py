@@ -1,11 +1,9 @@
-from pyspark.sql import SparkSession
-from pyspark.ml.recommendation import ALS
 from pyspark.ml.evaluation import RegressionEvaluator
+from pyspark.ml.recommendation import ALS
+from pyspark.sql import SparkSession
 
 # Initialize Spark session
-spark = SparkSession.builder \
-    .appName("Movie Recommendation System") \
-    .getOrCreate()
+spark = SparkSession.builder.appName("Movie Recommendation System").getOrCreate()
 
 
 # Load ratings data
@@ -19,15 +17,14 @@ ratings = ratings.dropDuplicates().na.drop()
 movies = movies.dropDuplicates().na.drop()
 
 # Assuming you're going to use the 'userId', 'movieId', and 'rating' columns for recommendations
-ratings = ratings.select('userId', 'movieId', 'rating')
-movies = movies.select('movieId', 'title')
+ratings = ratings.select("userId", "movieId", "rating")
+movies = movies.select("movieId", "title")
 
 # Split the data into training and test sets
 (training, test) = ratings.randomSplit([0.8, 0.2])
 
 # Build the ALS model
-als = ALS(maxIter=5, regParam=0.01, userCol="userId", itemCol="movieId", ratingCol="rating",
-          coldStartStrategy="drop", nonnegative=True)
+als = ALS(maxIter=5, regParam=0.01, userCol="userId", itemCol="movieId", ratingCol="rating", coldStartStrategy="drop", nonnegative=True)
 
 # Fit the model to the training data
 model = als.fit(training)
@@ -36,8 +33,7 @@ model = als.fit(training)
 predictions = model.transform(test)
 
 # Evaluate the model
-evaluator = RegressionEvaluator(metricName="rmse", labelCol="rating",
-                                predictionCol="prediction")
+evaluator = RegressionEvaluator(metricName="rmse", labelCol="rating", predictionCol="prediction")
 rmse = evaluator.evaluate(predictions)
 print(f"Root-mean-square error = {rmse}")
 

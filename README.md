@@ -12,11 +12,19 @@ bash env.sh
 ```
 - Install additional dependencies inside docker container bash shell
 ```
-pip install numpy
+pip install numpy matplotlib pandas
 ```
 
 ## Run PySpark
-- Run application
+- Run main script to fetch all recommendations
 ```
 bash run.sh
+```
+- Run script to fetch recommendations by popularity
+```
+bash popular_movies.sh
+```
+- Run script to fetch recommendations by matrix factorization
+```
+bash matrix_factorization.sh
 ```

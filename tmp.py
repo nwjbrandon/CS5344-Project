@@ -209,5 +209,5 @@ if __name__ == "__main__":
     spark = SparkSession.builder.appName("CS5344 Project").getOrCreate()
     movielens20m = MovieLens20m(spark=spark)
 
-    recommend_movies_by_popularity(movielens20m)
+    # recommend_movies_by_popularity(movielens20m)
     recommend_movies_by_matrix_factorization(movielens20m, threshold=3.5)
