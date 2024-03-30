@@ -3,6 +3,7 @@ from typing import Optional
 
 import numpy as np
 
+from pyspark.sql.window import Window, WindowSpec
 from pyspark.sql import SparkSession
 import pyspark.sql.functions as F
 from pyspark.sql.types import FloatType, IntegerType, StringType, StructField, StructType
@@ -165,8 +166,28 @@ def recommend_movies_by_popularity(movielens20m: MovieLens20m):
     # Rank popular movies that has polarized ratings
     movielens20m.rank_movies_by_std_rating(min_n_rating_threshold=min_n_rating_threshold).show(10)
 
+def calculate_hit_rate(predictions, recommendation_count = 10):
+    # Get top N recommendations for each user
+    windowSpec = Window.partitionBy('userId').orderBy(F.desc('prediction'))
+    top_prediction = predictions.withColumn('rank', F.rank().over(windowSpec)).filter(F.col('rank') <= recommendation_count)
 
-def recommend_movies_by_matrix_factorization(movielens20m: MovieLens20m, threshold = 3.5):
+    # Defining a hit as predicted rating above a certain threshold
+    hit_threshold = 3.5
+    hits_per_user = top_prediction.withColumn('hit', (F.col('rating')>=hit_threshold).cast('int')).groupBy('userId').agg(F.sum('hit').alias('hits'))
+
+    hits_per_user.show(10)
+    # A user is considered a hit if they have at least 1 hit in their top N
+    users_hit = hits_per_user.filter(F.col('hits')>0).count()
+
+    # Total number of users who received recommendations
+    total_users = predictions.select('userId').distinct().count()
+    
+    # Calculating hit ratio
+    hit_rate = users_hit/total_users if total_users > 0 else 0
+    print(f"Hit Rate inside function: {hit_rate}")
+    return hit_rate
+
+def recommend_movies_by_matrix_factorization(movielens20m: MovieLens20m, recommendation_count):
     ratings_df = movielens20m.get_ratings_df()
     rating_statistics = movielens20m.get_rating_statistics()
     min_n_rating_threshold = rating_statistics["n_rating_50_percentile"]
@@ -181,20 +202,16 @@ def recommend_movies_by_matrix_factorization(movielens20m: MovieLens20m, thresho
     # Filter rows where predictions are not NaN
     valid_predictions = predictions.filter(predictions.prediction != np.nan)
 
+    print("Valid Predictions:")
+    valid_predictions.show(10)
+
     # Calculate Hit Rate
-    hits = valid_predictions.filter(valid_predictions.rating >= threshold).filter(valid_predictions.prediction >= threshold).count()
-    total = valid_predictions.count()
-    hit_rate = hits /total if total>0 else 0
+    hit_rate = calculate_hit_rate(valid_predictions, recommendation_count)
 
     # Calculate Coverage
     unique_recommended = valid_predictions.select('movieId').distinct().count()
     total_movies = movielens20m.get_movies_df().select('movieId').distinct().count()
     coverage = unique_recommended/total_movies if total_movies > 0 else 0
-
-
-    valid_predictions.show(10)
-
-
 
     rmse = mf.evaluate(valid_predictions)
     print("RMSE:", rmse) # 0.8165847881901006
@@ -206,4 +223,4 @@ if __name__ == "__main__":
     movielens20m = MovieLens20m(spark=spark)
 
     recommend_movies_by_popularity(movielens20m)
-    recommend_movies_by_matrix_factorization(movielens20m, threshold=3.5)
+    recommend_movies_by_matrix_factorization(movielens20m, recommendation_count=10)
