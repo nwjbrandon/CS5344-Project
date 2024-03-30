@@ -9,4 +9,4 @@ if __name__ == "__main__":
     movielens20m = MovieLens20m(spark=spark)
 
     recommend_movies_by_popularity(movielens20m)
-    recommend_movies_by_matrix_factorization(movielens20m, min_n_rating_threshold=18)
+    recommend_movies_by_matrix_factorization(movielens20m)

@@ -58,11 +58,12 @@ class MatrixFactorization:
         return evaluator.evaluate()
 
 
-def recommend_movies_by_matrix_factorization(movielens20m: MovieLens20m, min_n_rating_threshold=18):
+def recommend_movies_by_matrix_factorization(movielens20m: MovieLens20m):
     ratings_df = movielens20m.get_ratings_df()
 
+    n_rating_50_percentile = 18
     mf = MatrixFactorization()
-    ratings_df = mf.preprocess(ratings_df, min_n_rating_threshold=min_n_rating_threshold)
+    ratings_df = mf.preprocess(ratings_df, min_n_rating_threshold=n_rating_50_percentile)
 
     train, test = ratings_df.randomSplit([0.9, 0.1], seed=RANDOM_SEED)
     mf.fit(train)
@@ -72,12 +73,11 @@ def recommend_movies_by_matrix_factorization(movielens20m: MovieLens20m, min_n_r
     valid_predictions = predictions.filter(predictions.prediction != np.nan)
 
     scores = mf.evaluate(valid_predictions, movielens20m)
-    print(scores)  # {'rmse': 0.8165847881901005, 'hit_rate': 0.40415162228417006, 'coverage': 0.485996040765452}
+    # {'rmse': 0.8165847881901005, 'hit_rate': 0.40415162228417006, 'coverage': 0.485996040765452}
+    print(scores)
 
 
 if __name__ == "__main__":
     spark = SparkSession.builder.appName("CS5344 Project Matrix Factorization").getOrCreate()
     movielens20m = MovieLens20m(spark=spark)
-
-    n_rating_50_percentile = 18
-    recommend_movies_by_matrix_factorization(movielens20m, min_n_rating_threshold=n_rating_50_percentile)
+    recommend_movies_by_matrix_factorization(movielens20m)
