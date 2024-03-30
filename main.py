@@ -166,7 +166,7 @@ def recommend_movies_by_popularity(movielens20m: MovieLens20m):
     movielens20m.rank_movies_by_std_rating(min_n_rating_threshold=min_n_rating_threshold).show(10)
 
 
-def recommend_movies_by_matrix_factorization(movielens20m: MovieLens20m):
+def recommend_movies_by_matrix_factorization(movielens20m: MovieLens20m, threshold = 3.5):
     ratings_df = movielens20m.get_ratings_df()
     rating_statistics = movielens20m.get_rating_statistics()
     min_n_rating_threshold = rating_statistics["n_rating_50_percentile"]
@@ -178,17 +178,32 @@ def recommend_movies_by_matrix_factorization(movielens20m: MovieLens20m):
     mf.fit(train)
     predictions = mf.predict(test)
 
-    # NOTE: Filter rows where users or items does not exist in the train set
-    predictions = predictions.filter(predictions.prediction != np.nan)
-    predictions.show(10)
+    # Filter rows where predictions are not NaN
+    valid_predictions = predictions.filter(predictions.prediction != np.nan)
 
-    rmse = mf.evaluate(predictions)
+    # Calculate Hit Rate
+    hits = valid_predictions.filter(valid_predictions.rating >= threshold).filter(valid_predictions.prediction >= threshold).count()
+    total = valid_predictions.count()
+    hit_rate = hits /total if total>0 else 0
+
+    # Calculate Coverage
+    unique_recommended = valid_predictions.select('movieId').distinct().count()
+    total_movies = movielens20m.get_movies_df().select('movieId').distinct().count()
+    coverage = unique_recommended/total_movies if total_movies > 0 else 0
+
+
+    valid_predictions.show(10)
+
+
+
+    rmse = mf.evaluate(valid_predictions)
     print("RMSE:", rmse) # 0.8165847881901006
-
+    print(f"Hit Rate: {hit_rate}")
+    print(f"Coverage: {coverage}")
 
 if __name__ == "__main__":
     spark = SparkSession.builder.appName("CS5344 Project").getOrCreate()
     movielens20m = MovieLens20m(spark=spark)
 
     recommend_movies_by_popularity(movielens20m)
-    recommend_movies_by_matrix_factorization(movielens20m)
+    recommend_movies_by_matrix_factorization(movielens20m, threshold=3.5)
