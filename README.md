@@ -102,6 +102,13 @@ Mean | 747.84
 
 <img src="imgs/boxplot_distribution_pf_number_of_rating.png">
 
+### Number Of Rating Vs Movie Age
+- Newer movies tend to have more ratings
+- Most movies tend to have few ratings
+
+<img src="imgs/scatterplot_of_n_rating_and_movie_age.png">
+
+
 ### Movie Popularity Ranking By Number Of Rating
 ```
 +-------+--------+------------------+------------------+--------------------+--------------------+

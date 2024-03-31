@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import pyspark.sql.functions as F
 from pyspark.sql import SparkSession
+from pyspark.sql.types import IntegerType
 
 from dataset import MovieLens20m
 from popular_movies import PopularMovies
@@ -39,7 +40,7 @@ class MovieLensStatistics:
         ]
         ax.bxp(boxes, showfliers=False)
         ax.set_ylabel("Logarithm Of Number Of Rating")
-        fig.suptitle("Box Plot Of Log Distribution Of Number Of Rating")
+        fig.suptitle("Box Plot Of Log Distribution Of Number Of Rating Per Movie")
         plt.savefig("imgs/boxplot_distribution_pf_number_of_rating.png")
         plt.close()
         return {
@@ -167,6 +168,25 @@ class MovieLensStatistics:
         plt.savefig(f"imgs/genres_distribution_for_user_{user_id}.png", bbox_inches="tight")
         plt.close()
 
+    def visualise_n_rating_and_avg_rating_scatterplot(self, current_year=2024):
+        df = self.popular_movies_df.withColumn("log_n_rating", F.log10(F.col("n_rating")))
+        df = df.withColumn("released_year", F.regexp_extract(F.col("title"), r"(?<=\()(\d+)(?=\))", 1).cast(IntegerType()))
+        df = df.withColumn("movie_age", current_year - df["released_year"])
+        df = df.filter(df.movie_age != np.nan)
+
+        # TODO: Someone help me fixed the 3 rows extracts the wrong year
+        df = df.filter(df.movie_age < 200)
+
+        df = df.select(["movieId", "title", "n_rating", "movie_age"])
+
+        df = df.toPandas()
+        plt.scatter(x=df["movie_age"], y=df["n_rating"], s=2)
+        plt.title("Scatter Plot Of Number Of Rating And Movie Age")
+        plt.xlabel("Movie Age (years)")
+        plt.ylabel("Number Of Ratings")
+        plt.savefig("imgs/scatterplot_of_n_rating_and_move_age.png", bbox_inches="tight")
+        plt.close()
+
 
 def compute_movielens_statistics(movielens20m: MovieLens20m):
     movielens_statistics = MovieLensStatistics(movielens20m)
@@ -184,6 +204,7 @@ def compute_movielens_statistics(movielens20m: MovieLens20m):
     print("genres_statistics: ", genres_statistics)
 
     movielens_statistics.visualise_genres_rating_barplot()
+    movielens_statistics.visualise_n_rating_and_avg_rating_scatterplot()
 
     movielens_statistics.rank_movies_by_number_of_rating(min_n_rating_threshold=50).show(10)
     movielens_statistics.rank_movies_by_average_rating(min_n_rating_threshold=50).show(10)
