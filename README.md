@@ -78,6 +78,11 @@ Sci-Fi | 1743
 
 <img src="imgs/genres_rating_distribution.png">
 
+### Genre Trends
+- Trending genres are Comedy, Drama, Actions
+
+<img src="imgs/genre_trends.png">
+
 ### Genres Distribution By User
 - User 3 likes movies of genres Sci-Fi, Action, and Drama
 

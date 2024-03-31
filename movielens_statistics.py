@@ -235,6 +235,37 @@ class MovieLensStatistics:
         plt.savefig("imgs/scatterplot_of_n_rating_and_movie_age.png", bbox_inches="tight")
         plt.close()
 
+    def visualise_genre_trends(self, current_year=2024):
+        ratings_df = self.movielens20m.get_ratings_df()
+        movies_df = self.movielens20m.get_movies_df()
+
+        df = ratings_df.join(movies_df, ["movieId"])
+        df = df.withColumn("released_year", F.regexp_extract(F.col("title"), r"(?<=\()(\d+)(?=\))", 1).cast(IntegerType()))
+        df = df.withColumn("movie_age", current_year - df["released_year"])
+        df = df.filter(df.movie_age != np.nan)
+
+        # TODO: Someone help me fixed the 3 rows extracts the wrong year
+        df = df.filter(df.movie_age < 200)
+
+        df = df.filter(df.genres != "(no genres listed)")
+        df = df.select(["movieId", "userId", "released_year", F.explode(F.split(F.col("genres"), "\\|")).alias("genres")])
+
+        df = df.groupBy(["released_year", "genres"]).count()
+        df = df.sort(F.asc("genres"), F.asc("released_year"))
+
+        df = df.toPandas()
+        genres = np.unique(df["genres"]).tolist()
+        plt.figure(figsize=(16, 8))
+        for genre in genres:
+            sub_df = df[df["genres"] == genre]
+            plt.plot(sub_df["released_year"], sub_df["count"], label=genre)
+        plt.legend()
+        plt.title("Trends In Genres Over The Years Measured By Number Of Ratings")
+        plt.ylabel("Number Of Ratings")
+        plt.xlabel("Years")
+        plt.savefig("imgs/genre_trends.png")
+        plt.close()
+
 
 def compute_movielens_statistics(movielens20m: MovieLens20m):
     movielens_statistics = MovieLensStatistics(movielens20m)
@@ -263,6 +294,7 @@ def compute_movielens_statistics(movielens20m: MovieLens20m):
 
     movielens_statistics.visualise_genres_barplot_for_user(user_id=3)
     movielens_statistics.visualise_genres_barplot_for_user(user_id=5)
+    movielens_statistics.visualise_genre_trends()
 
 
 if __name__ == "__main__":
