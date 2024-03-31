@@ -132,6 +132,21 @@ class MovieLensStatistics:
 
         return {"n_genres": n_genres, "distribution": genres_distribution}
 
+    def visualise_genres_rating_barplot(self):
+        genres_rating_df = self.popular_movies_df.select(["avg_rating", "genres"])
+
+        genres_df = genres_rating_df.select("avg_rating", F.explode(F.split(F.col("genres"), "\\|")).alias("genres"))
+        genres_df = genres_df.groupBy("genres").agg(F.avg("avg_rating").alias("rating"))
+
+        genres_df = genres_df.toPandas()
+        genres_df = genres_df.set_index("genres")
+        genres_df.plot.bar()
+
+        plt.title("Bar Plot Of Ratings Of Genres Distribution In MovieLens20m")
+        plt.ylabel("Average Rating")
+        plt.savefig("imgs/genres_rating_distribution.png", bbox_inches="tight")
+        plt.close()
+
     def visualise_genres_barplot_for_user(self, user_id=5):
         movies_df = self.movielens20m.get_movies_df()
         ratings_df = self.movielens20m.get_ratings_df()
@@ -167,6 +182,8 @@ def compute_movielens_statistics(movielens20m: MovieLens20m):
 
     genres_statistics = movielens_statistics.visualise_genres_barplot()
     print("genres_statistics: ", genres_statistics)
+
+    movielens_statistics.visualise_genres_rating_barplot()
 
     movielens_statistics.rank_movies_by_number_of_rating(min_n_rating_threshold=50).show(10)
     movielens_statistics.rank_movies_by_average_rating(min_n_rating_threshold=50).show(10)

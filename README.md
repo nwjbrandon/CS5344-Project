@@ -72,6 +72,12 @@ Sci-Fi | 1743
 
 <img src="imgs/genres_distribution.png">
 
+### Genres Rating Distribution
+
+- Audience does not have a preference of genre on this platform as ratings for each genres does not vary much
+
+<img src="imgs/genres_rating_distribution.png">
+
 ### Genres Distribution By User
 - User 3 likes movies of genres Sci-Fi, Action, and Drama
 
