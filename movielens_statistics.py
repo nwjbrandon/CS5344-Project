@@ -21,17 +21,18 @@ class MovieLensStatistics:
         med = percentiles[2]
         q3 = percentiles[3]
         whishi = percentiles[4]
+        mean = self.compute_average_n_rating()
 
         fig, ax = plt.subplots()
         boxes = [
             {
                 "label": "Number Of Rating",
-                "whislo": np.log(whislo),  # Bottom whisker position
-                "q1": np.log(q1),  # First quartile (25th percentile)
-                "med": np.log(med),  # Median         (50th percentile)
-                "q3": np.log(q3),  # Third quartile (75th percentile)
-                "whishi": np.log(whishi),  # Top whisker position
-                "fliers": [],  # Outliers
+                "whislo": np.log(whislo),
+                "q1": np.log(q1),
+                "med": np.log(med),
+                "q3": np.log(q3),
+                "whishi": np.log(whishi),
+                "fliers": [],
             }
         ]
         ax.bxp(boxes, showfliers=False)
@@ -39,33 +40,23 @@ class MovieLensStatistics:
         fig.suptitle("Box Plot Of Log Distribution Of Number Of Rating")
         plt.savefig("imgs/boxplot_distribution_pf_number_of_rating.png")
         plt.close()
-        return percentiles
+        return {
+            "whislo": whislo,
+            "q1": q1,
+            "med": med,
+            "q3": q3,
+            "whishi": whishi,
+            "mean": mean,
+        }
 
-    # def compute_rating_statistics(self):
-    #     n_rating_stats = self.popular_movies_df.select(
-    #         [
-    #             F.mean("n_rating").alias("n_rating_avg"),
-    #             F.min("n_rating").alias("n_rating_min"),
-    #             F.max("n_rating").alias("n_rating_max"),
-    #         ]
-    #     ).collect()
-    #     if len(n_rating_stats) == 0:
-    #         raise "Not Enough Data"
+    def compute_average_n_rating(self):
+        n_rating_stats = self.popular_movies_df.select(
+            [
+                F.mean("n_rating").alias("n_rating_avg"),
+            ]
+        ).collect()
 
-    #     n_rating_stats = n_rating_stats[0]
-    #     n_rating_avg = n_rating_stats.n_rating_avg
-    #     n_rating_min = n_rating_stats.n_rating_min
-    #     n_rating_max = n_rating_stats.n_rating_max
-    #     percentiles = self.popular_movies_df.approxQuantile("n_rating", [0.25, 0.50, 0.75], 0)
-    #     n_rating_25_percentile, n_rating_50_percentile, n_rating_75_percentile = percentiles
-    #     return {
-    #         "n_rating_avg": n_rating_avg,
-    #         "n_rating_min": n_rating_min,
-    #         "n_rating_max": n_rating_max,
-    #         "n_rating_25_percentile": n_rating_25_percentile,
-    #         "n_rating_50_percentile": n_rating_50_percentile,
-    #         "n_rating_75_percentile": n_rating_75_percentile,
-    #     }
+        return n_rating_stats[0].n_rating_avg
 
     # def rank_movies_by_number_of_rating(self, min_n_rating_threshold: Optional[int] = 0):
     #     popular_movies_df = self.preprocess_movies_df(min_n_rating_threshold)

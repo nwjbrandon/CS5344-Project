@@ -34,6 +34,8 @@ bash movielens_statistics.sh
 ```
 
 ## MovieLens Data Exploration
+
+### Number Of Rating
 - Log distribution of number of rating for each movie shows the number of rating is highly skewed
 
 <center>
@@ -45,6 +47,7 @@ Q1 | 3
 Med | 18
 Q3 | 205
 Whishi | 67310
+Mean | 747.84
 
 <img src="imgs/boxplot_distribution_pf_number_of_rating.png">
 
