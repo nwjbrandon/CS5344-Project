@@ -37,8 +37,6 @@ bash movielens_statistics.sh
 
 ### Dataset Information
 
-<center>
-
 Statistics | Value
 --- | ---
 Timespan Of Collection (days) | 7385.78
@@ -47,11 +45,7 @@ Number Of Ratings | 20000263
 Number Of Movies | 27278
 Number Of Genres | 19
 
-</center>
-
 ### Genres Distribution
-
-<center>
 
 Genre | Number Of Movies
 --- | ---
@@ -78,12 +72,18 @@ Sci-Fi | 1743
 
 <img src="imgs/genres_distribution.png">
 
-</center>
+### Genres Distribution By User
+- User 3 likes movies of genres Sci-Fi, Action, and Drama
+
+<img src="imgs/genres_distribution_for_user_3.png">
+
+- User 5 likes movies of genres Comedy and Adventure
+
+<img src="imgs/genres_distribution_for_user_5.png">
+
 
 ### Number Of Rating
 - Log distribution of number of rating for each movie shows the number of rating is highly skewed
-
-<center>
 
 Percentile | Value
 --- | ---
@@ -95,8 +95,6 @@ Whishi | 67310
 Mean | 747.84
 
 <img src="imgs/boxplot_distribution_pf_number_of_rating.png">
-
-</center>
 
 ### Movie Popularity Ranking By Number Of Rating
 ```

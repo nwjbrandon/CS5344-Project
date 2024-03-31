@@ -132,25 +132,48 @@ class MovieLensStatistics:
 
         return {"n_genres": n_genres, "distribution": genres_distribution}
 
+    def visualise_genres_barplot_for_user(self, user_id=5):
+        movies_df = self.movielens20m.get_movies_df()
+        ratings_df = self.movielens20m.get_ratings_df()
+        user_ratings_df = ratings_df.filter(ratings_df.userId == user_id)
+
+        user_movies_df = user_ratings_df.join(movies_df, ["movieId"])
+
+        genres_df = user_movies_df.select(F.col("genres"))
+        genres_df = genres_df.select(F.explode(F.split(F.col("genres"), "\\|")).alias("genres"))
+        genres_df = genres_df.groupBy("genres").count()
+
+        genres_df = genres_df.toPandas()
+        genres_df = genres_df.set_index("genres")
+        genres_df.plot.bar()
+
+        plt.title(f"Bar Plot Of Genres Distribution In MovieLens20m for User {user_id}")
+        plt.ylabel("Number Of Movies")
+        plt.savefig(f"imgs/genres_distribution_for_user_{user_id}.png", bbox_inches="tight")
+        plt.close()
+
 
 def compute_movielens_statistics(movielens20m: MovieLens20m):
     movielens_statistics = MovieLensStatistics(movielens20m)
 
-    # dataset_sizes = movielens_statistics.get_dataset_sizes()
-    # print("dataset_sizes: ", dataset_sizes)
+    dataset_sizes = movielens_statistics.get_dataset_sizes()
+    print("dataset_sizes: ", dataset_sizes)
 
-    # timespan = movielens_statistics.get_timespan_of_ratings()
-    # print("timespan:", timespan)
+    timespan = movielens_statistics.get_timespan_of_ratings()
+    print("timespan:", timespan)
 
-    # rating_statistics = movielens_statistics.visualise_movie_n_rating_boxplot()
-    # print("rating_statistics: ", rating_statistics)
+    rating_statistics = movielens_statistics.visualise_movie_n_rating_boxplot()
+    print("rating_statistics: ", rating_statistics)
 
     genres_statistics = movielens_statistics.visualise_genres_barplot()
     print("genres_statistics: ", genres_statistics)
 
-    # movielens_statistics.rank_movies_by_number_of_rating(min_n_rating_threshold=50).show(10)
-    # movielens_statistics.rank_movies_by_average_rating(min_n_rating_threshold=50).show(10)
-    # movielens_statistics.rank_movies_by_std_rating(min_n_rating_threshold=50).show(10)
+    movielens_statistics.rank_movies_by_number_of_rating(min_n_rating_threshold=50).show(10)
+    movielens_statistics.rank_movies_by_average_rating(min_n_rating_threshold=50).show(10)
+    movielens_statistics.rank_movies_by_std_rating(min_n_rating_threshold=50).show(10)
+
+    movielens_statistics.visualise_genres_barplot_for_user(user_id=3)
+    movielens_statistics.visualise_genres_barplot_for_user(user_id=5)
 
 
 if __name__ == "__main__":
