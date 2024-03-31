@@ -6,7 +6,7 @@ from pyspark.sql import SparkSession
 
 from dataset import MovieLens20m
 from popular_movies import PopularMovies
-
+from typing import Optional
 
 class MovieLensStatistics:
     def __init__(self, movielens20m: MovieLens20m) -> None:
@@ -58,32 +58,36 @@ class MovieLensStatistics:
 
         return n_rating_stats[0].n_rating_avg
 
-    # def rank_movies_by_number_of_rating(self, min_n_rating_threshold: Optional[int] = 0):
-    #     popular_movies_df = self.preprocess_movies_df(min_n_rating_threshold)
-    #     popular_movies_by_number_of_ratings_df = popular_movies_df.sort(F.desc("n_rating"))
-    #     return popular_movies_by_number_of_ratings_df
+    def rank_movies_by_number_of_rating(self, min_n_rating_threshold: Optional[int] = 0):
+        popular_movies_df = self.filter_movies_with_at_least_n_rating(min_n_rating_threshold)
+        popular_movies_by_number_of_ratings_df = popular_movies_df.sort(F.desc("n_rating"))
+        return popular_movies_by_number_of_ratings_df
 
-    # def rank_movies_by_average_rating(self, min_n_rating_threshold: Optional[int] = None):
-    #     popular_movies_df = self.preprocess_movies_df(min_n_rating_threshold)
-    #     popular_movies_by_average_ratings_df = popular_movies_df.sort(F.desc("avg_rating"))
-    #     return popular_movies_by_average_ratings_df
+    def rank_movies_by_average_rating(self, min_n_rating_threshold: Optional[int] = None):
+        popular_movies_df = self.filter_movies_with_at_least_n_rating(min_n_rating_threshold)
+        popular_movies_by_average_ratings_df = popular_movies_df.sort(F.desc("avg_rating"))
+        return popular_movies_by_average_ratings_df
 
-    # def rank_movies_by_std_rating(self, min_n_rating_threshold: Optional[int] = None):
-    #     popular_movies_df = self.preprocess_movies_df(min_n_rating_threshold)
-    #     popular_movies_by_std_ratings_df = popular_movies_df.filter(self.popular_movies_df.std_rating != np.nan).sort(F.desc("std_rating"))
-    #     return popular_movies_by_std_ratings_df
+    def rank_movies_by_std_rating(self, min_n_rating_threshold: Optional[int] = None):
+        popular_movies_df = self.filter_movies_with_at_least_n_rating(min_n_rating_threshold)
+        popular_movies_by_std_ratings_df = popular_movies_df.filter(self.popular_movies_df.std_rating != np.nan).sort(F.desc("std_rating"))
+        return popular_movies_by_std_ratings_df
 
-    # def preprocess_movies_df(self, min_n_rating_threshold: Optional[int] = 0):
-    #     if min_n_rating_threshold == 0:
-    #         return self.popular_movies_df
-    #     else:
-    #         return self.popular_movies_df.filter(self.popular_movies_df.n_rating >= min_n_rating_threshold)
+    def filter_movies_with_at_least_n_rating(self, min_n_rating_threshold: Optional[int] = 0):
+        if min_n_rating_threshold == 0:
+            return self.popular_movies_df
+        else:
+            return self.popular_movies_df.filter(self.popular_movies_df.n_rating >= min_n_rating_threshold)
 
 
 def compute_movielens_statistics(movielens20m: MovieLens20m):
     movielens_statistics = MovieLensStatistics(movielens20m)
-    percenties = movielens_statistics.visualise_movie_n_rating_boxplot()
-    print("Percenties: ", percenties)
+    n_rating_statistics = movielens_statistics.visualise_movie_n_rating_boxplot()
+    print("n_rating_statistics: ", n_rating_statistics)
+
+    movielens_statistics.rank_movies_by_number_of_rating(min_n_rating_threshold=50).show(10)
+    movielens_statistics.rank_movies_by_average_rating(min_n_rating_threshold=50).show(10)
+    movielens_statistics.rank_movies_by_std_rating(min_n_rating_threshold=50).show(10)
 
 
 if __name__ == "__main__":
