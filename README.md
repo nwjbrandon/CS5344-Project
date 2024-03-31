@@ -37,13 +37,48 @@ bash movielens_statistics.sh
 
 ### Dataset Information
 
+<center>
+
 Statistics | Value
 --- | ---
 Timespan Of Collection (days) | 7385.78
 Timespan Of Collection (years) | 20.22
 Number Of Ratings | 20000263
 Number Of Movies | 27278
-Number Of Genres | 
+Number Of Genres | 19
+
+</center>
+
+### Genres Distribution
+
+<center>
+
+Genre | Number Of Movies
+--- | ---
+Crime | 2939
+Romance | 4127
+Thriller | 4178
+Adventure | 2329
+Drama | 13344
+War | 1194
+Documentary | 2471
+Fantasy | 1412
+Mystery | 1514
+Musical | 1036
+Animation | 1027
+Film-Noir | 330
+IMAX | 196
+Horror | 2611
+Western | 676
+Comedy | 8374
+Children | 1139
+Action | 3520
+Sci-Fi | 1743
+(no genres listed) | 246
+
+<img src="imgs/genres_distribution.png">
+
+</center>
 
 ### Number Of Rating
 - Log distribution of number of rating for each movie shows the number of rating is highly skewed
