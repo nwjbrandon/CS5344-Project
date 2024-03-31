@@ -87,8 +87,21 @@ Sci-Fi | 1743
 
 <img src="imgs/genres_distribution_for_user_5.png">
 
+### Number Of Rating Per User
+- Log of number of rating for each user shows the number of movies watched is highly skewed
 
-### Number Of Rating
+Percentile | Value
+--- | ---
+Whislo | 20
+Q1 | 35
+Med | 68
+Q3 | 155
+Whishi | 9254
+Mean | 144.41
+
+<img src="imgs/boxplot_log_number_of_rating_per_user.png">
+
+### Number Of Rating Per Movie
 - Log distribution of number of rating for each movie shows the number of rating is highly skewed
 
 Percentile | Value
@@ -100,7 +113,7 @@ Q3 | 205
 Whishi | 67310
 Mean | 747.84
 
-<img src="imgs/boxplot_distribution_pf_number_of_rating.png">
+<img src="imgs/boxplot_distribution_of_number_of_rating.png">
 
 ### Number Of Rating Vs Movie Age
 - Newer movies tend to have more ratings

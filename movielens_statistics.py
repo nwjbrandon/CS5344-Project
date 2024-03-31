@@ -39,9 +39,46 @@ class MovieLensStatistics:
             }
         ]
         ax.bxp(boxes, showfliers=False)
-        ax.set_ylabel("Logarithm Of Number Of Rating")
+        ax.set_ylabel("Logarithm Of Number Of Rating Per Movie")
         fig.suptitle("Box Plot Of Log Distribution Of Number Of Rating Per Movie")
-        plt.savefig("imgs/boxplot_distribution_pf_number_of_rating.png")
+        plt.savefig("imgs/boxplot_distribution_of_number_of_rating.png")
+        plt.close()
+        return {
+            "whislo": whislo,
+            "q1": q1,
+            "med": med,
+            "q3": q3,
+            "whishi": whishi,
+            "mean": mean,
+        }
+
+    def visualise_n_rating_per_user_boxplot(self):
+        ratings_df = self.movielens20m.get_ratings_df()
+        user_ratings_df = ratings_df.groupBy("userId").count()
+        percentiles = user_ratings_df.approxQuantile("count", [0.00, 0.25, 0.50, 0.75, 1.00], 0)
+        whislo = percentiles[0]
+        q1 = percentiles[1]
+        med = percentiles[2]
+        q3 = percentiles[3]
+        whishi = percentiles[4]
+        mean = self.compute_average_n_rating_per_user()
+
+        fig, ax = plt.subplots()
+        boxes = [
+            {
+                "label": "Number Of Rating",
+                "whislo": np.log(whislo),
+                "q1": np.log(q1),
+                "med": np.log(med),
+                "q3": np.log(q3),
+                "whishi": np.log(whishi),
+                "fliers": [],
+            }
+        ]
+        ax.bxp(boxes, showfliers=False)
+        ax.set_ylabel("Logarithm Of Number Of Rating Per User")
+        fig.suptitle("Box Plot Of Log Number Of Rating Per User")
+        plt.savefig("imgs/boxplot_log_number_of_rating_per_user.png")
         plt.close()
         return {
             "whislo": whislo,
@@ -60,6 +97,17 @@ class MovieLensStatistics:
         ).collect()
 
         return n_rating_stats[0].n_rating_avg
+
+    def compute_average_n_rating_per_user(self):
+        ratings_df = self.movielens20m.get_ratings_df()
+        user_ratings_df = ratings_df.groupBy("userId").count()
+        user_ratings_stats = user_ratings_df.select(
+            [
+                F.mean("count").alias("count_avg"),
+            ]
+        ).collect()
+
+        return user_ratings_stats[0].count_avg
 
     def rank_movies_by_number_of_rating(self, min_n_rating_threshold: Optional[int] = 0):
         popular_movies_df = self.filter_movies_with_at_least_n_rating(min_n_rating_threshold)
@@ -184,7 +232,7 @@ class MovieLensStatistics:
         plt.title("Scatter Plot Of Number Of Rating And Movie Age")
         plt.xlabel("Movie Age (years)")
         plt.ylabel("Number Of Ratings")
-        plt.savefig("imgs/scatterplot_of_n_rating_and_move_age.png", bbox_inches="tight")
+        plt.savefig("imgs/scatterplot_of_n_rating_and_movie_age.png", bbox_inches="tight")
         plt.close()
 
 
@@ -199,6 +247,9 @@ def compute_movielens_statistics(movielens20m: MovieLens20m):
 
     rating_statistics = movielens_statistics.visualise_movie_n_rating_boxplot()
     print("rating_statistics: ", rating_statistics)
+
+    user_rating_statistics = movielens_statistics.visualise_n_rating_per_user_boxplot()
+    print("user_rating_statistics: ", user_rating_statistics)
 
     genres_statistics = movielens_statistics.visualise_genres_barplot()
     print("genres_statistics: ", genres_statistics)
