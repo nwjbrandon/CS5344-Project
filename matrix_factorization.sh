@@ -1,2 +1,1 @@
-# Solve java.lang.OutOfMemoryError: Java heap space: https://stackoverflow.com/questions/50842877/java-lang-outofmemoryerror-java-heap-space-using-docker
 spark-submit --driver-memory 6G --executor-memory 1G matrix_factorization.py

@@ -28,3 +28,27 @@ bash popular_movies.sh
 ```
 bash matrix_factorization.sh
 ```
+- Run script to visualise rating and movie statistics
+```
+bash movielens_statistics.sh
+```
+
+## MovieLens Data Exploration
+- Log distribution of number of rating for each movie shows the number of rating is highly skewed
+
+<center>
+
+Percentile | Value
+--- | ---
+Whislo | 1
+Q1 | 3
+Med | 18
+Q3 | 205
+Whishi | 67310
+
+<img src="imgs/boxplot_distribution_pf_number_of_rating.png">
+
+</center>
+
+## Issues
+- Solve java.lang.OutOfMemoryError: Java heap space (https://stackoverflow.com/questions/50842877/java-lang-outofmemoryerror-java-heap-space-using-docker)

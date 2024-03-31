@@ -21,6 +21,9 @@ class PopularMovies:
         popular_movies_df = popular_movies_df.join(movies_df, ["movieId"])
         return popular_movies_df
 
+    def get_popular_movies_df(self):
+        return self.popular_movies_df
+
     def rank_movies_by_number_of_rating(self, min_n_rating_threshold: Optional[int] = 0):
         popular_movies_df = self.preprocess_movies_df(min_n_rating_threshold)
         popular_movies_by_number_of_ratings_df = popular_movies_df.sort(F.desc("n_rating"))
