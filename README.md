@@ -35,6 +35,16 @@ bash movielens_statistics.sh
 
 ## MovieLens Data Exploration
 
+### Dataset Information
+
+Statistics | Value
+--- | ---
+Timespan Of Collection (days) | 7385.78
+Timespan Of Collection (years) | 20.22
+Number Of Ratings | 20000263
+Number Of Movies | 27278
+Number Of Genres | 
+
 ### Number Of Rating
 - Log distribution of number of rating for each movie shows the number of rating is highly skewed
 

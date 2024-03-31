@@ -1,3 +1,5 @@
+from typing import Optional
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -6,7 +8,7 @@ from pyspark.sql import SparkSession
 
 from dataset import MovieLens20m
 from popular_movies import PopularMovies
-from typing import Optional
+
 
 class MovieLensStatistics:
     def __init__(self, movielens20m: MovieLens20m) -> None:
@@ -79,9 +81,48 @@ class MovieLensStatistics:
         else:
             return self.popular_movies_df.filter(self.popular_movies_df.n_rating >= min_n_rating_threshold)
 
+    def get_timespan_of_ratings(self):
+        timestamps = (
+            self.movielens20m.get_ratings_df()
+            .select(
+                [
+                    F.min("timestamp").alias("min_timestamp"),
+                    F.max("timestamp").alias("max_timestamp"),
+                ]
+            )
+            .collect()
+        )
+
+        min_timestamp = timestamps[0].min_timestamp
+        max_timestamp = timestamps[0].max_timestamp
+
+        timespan_in_days = (max_timestamp - min_timestamp) / 60 / 60 / 24
+        timespan_in_years = timespan_in_days / 365.25
+
+        return {
+            "timespan_in_days": timespan_in_days,
+            "timespan_in_years": timespan_in_years,
+        }
+
+    def get_dataset_sizes(self):
+        n_ratings = self.movielens20m.get_ratings_df().count()
+        n_movies = self.movielens20m.get_movies_df().count()
+
+        return {
+            "n_ratings": n_ratings,
+            "n_movies": n_movies,
+        }
+
 
 def compute_movielens_statistics(movielens20m: MovieLens20m):
     movielens_statistics = MovieLensStatistics(movielens20m)
+
+    dataset_sizes = movielens_statistics.get_dataset_sizes()
+    print("dataset_sizes: ", dataset_sizes)
+
+    timespan = movielens_statistics.get_timespan_of_ratings()
+    print("timespan:", timespan)
+
     n_rating_statistics = movielens_statistics.visualise_movie_n_rating_boxplot()
     print("n_rating_statistics: ", n_rating_statistics)
 

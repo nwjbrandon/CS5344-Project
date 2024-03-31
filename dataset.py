@@ -6,16 +6,16 @@ schema_ratings = StructType(
     [
         StructField("userId", IntegerType(), False),
         StructField("movieId", IntegerType(), False),
-        StructField("rating", FloatType(), True),
-        StructField("timestamp", StringType(), True),
+        StructField("rating", FloatType(), False),
+        StructField("timestamp", IntegerType(), False),
     ]
 )
 
 schema_movies = StructType(
     [
         StructField("movieId", IntegerType(), False),
-        StructField("title", StringType(), True),
-        StructField("genres", StringType(), True),
+        StructField("title", StringType(), False),
+        StructField("genres", StringType(), False),
     ]
 )
 
