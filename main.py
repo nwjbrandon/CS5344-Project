@@ -3,7 +3,8 @@ from typing import Optional
 
 import numpy as np
 
-from pyspark.sql.window import Window, WindowSpec
+import evaluation as evaluation
+
 from pyspark.sql import SparkSession
 import pyspark.sql.functions as F
 from pyspark.sql.types import FloatType, IntegerType, StringType, StructField, StructType
@@ -166,26 +167,7 @@ def recommend_movies_by_popularity(movielens20m: MovieLens20m):
     # Rank popular movies that has polarized ratings
     movielens20m.rank_movies_by_std_rating(min_n_rating_threshold=min_n_rating_threshold).show(10)
 
-def calculate_hit_rate(predictions, recommendation_count = 10):
-    # Get top N recommendations for each user
-    windowSpec = Window.partitionBy('userId').orderBy(F.desc('prediction'))
-    top_prediction = predictions.withColumn('rank', F.rank().over(windowSpec)).filter(F.col('rank') <= recommendation_count)
 
-    # Defining a hit as predicted rating above a certain threshold
-    hit_threshold = 3.5
-    hits_per_user = top_prediction.withColumn('hit', (F.col('rating')>=hit_threshold).cast('int')).groupBy('userId').agg(F.sum('hit').alias('hits'))
-
-    hits_per_user.show(10)
-    # A user is considered a hit if they have at least 1 hit in their top N
-    users_hit = hits_per_user.filter(F.col('hits')>0).count()
-
-    # Total number of users who received recommendations
-    total_users = predictions.select('userId').distinct().count()
-    
-    # Calculating hit ratio
-    hit_rate = users_hit/total_users if total_users > 0 else 0
-    print(f"Hit Rate inside function: {hit_rate}")
-    return hit_rate
 
 def recommend_movies_by_matrix_factorization(movielens20m: MovieLens20m, recommendation_count):
     ratings_df = movielens20m.get_ratings_df()
@@ -206,7 +188,7 @@ def recommend_movies_by_matrix_factorization(movielens20m: MovieLens20m, recomme
     valid_predictions.show(10)
 
     # Calculate Hit Rate
-    hit_rate = calculate_hit_rate(valid_predictions, recommendation_count)
+    hit_rate = evaluation.calculate_hit_rate(valid_predictions, recommendation_count)
 
     # Calculate Coverage
     unique_recommended = valid_predictions.select('movieId').distinct().count()
