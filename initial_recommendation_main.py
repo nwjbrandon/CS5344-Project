@@ -4,6 +4,7 @@ from pyspark.sql.functions import col, split, explode, udf, lit
 from pyspark.ml.linalg import SparseVector, DenseVector
 from pyspark.sql.types import FloatType
 import numpy as np
+import argparse
 
 
 def get_genres_dataset(spark):
@@ -50,6 +51,11 @@ def get_user_input(movies):
         print("Invalid input. Please enter the numbers corresponding to your preferred genres, separated by commas.")
         return get_user_input()
 
+def setup_argparser():
+    parser = argparse.ArgumentParser(description="Genre-Based Movie Recommender")
+    parser.add_argument('-g', '--genres', type=str, help="Enter your preferred genres, separated by commas (e.g., Action,Adventure,Sci-Fi)", required=True)
+    return parser
+
 
 if __name__ == "__main__":
     
@@ -66,9 +72,12 @@ if __name__ == "__main__":
     model = cv.fit(movies)
     movies_featured = model.transform(movies)
     
-    user_genres = ["Action", "Adventure", "Sci-Fi"]
-    user_genres = ["Crime", "War", "Horror"]
+    # user_genres = ["Action", "Adventure", "Sci-Fi"]
+    # user_genres = ["Crime", "War", "Horror"]
     # user_genres = get_user_input(movies)
+    parser = setup_argparser()
+    args = parser.parse_args()
+    user_genres = args.genres.split(',')
     
     user_df = spark.createDataFrame([(user_genres,)], ["genres"])
     user_featured = model.transform(user_df)
