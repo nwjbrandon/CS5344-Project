@@ -174,21 +174,21 @@ def recommend_movies_by_matrix_factorization(movielens20m: MovieLens20m, recomme
     rating_statistics = movielens20m.get_rating_statistics()
     min_n_rating_threshold = rating_statistics["n_rating_50_percentile"]
 
+    threshold_rating = 3.5
     mf = MatrixFactorization()
     ratings_df = mf.preprocess(ratings_df, min_n_rating_threshold=min_n_rating_threshold)
-
+    print("prep done")
     train, test = ratings_df.randomSplit([0.9, 0.1], seed=SEED)
     mf.fit(train)
     predictions = mf.predict(test)
-
+    print('Train done')
     # Filter rows where predictions are not NaN
     valid_predictions = predictions.filter(predictions.prediction != np.nan)
 
-    print("Valid Predictions:")
-    valid_predictions.show(10)
-
     # Calculate Hit Rate
-    hit_rate = evaluation.calculate_hit_rate(valid_predictions, recommendation_count)
+    hit_rate = evaluation.calculate_hit_rate(valid_predictions, recommendation_count, threshold_rating)
+
+    map, precision, ndcg = evaluation.RMetrics(valid_predictions, recommendation_count, threshold_rating)
 
     # Calculate Coverage
     unique_recommended = valid_predictions.select('movieId').distinct().count()
@@ -199,6 +199,13 @@ def recommend_movies_by_matrix_factorization(movielens20m: MovieLens20m, recomme
     print("RMSE:", rmse) # 0.8165847881901006
     print(f"Hit Rate: {hit_rate}")
     print(f"Coverage: {coverage}")
+    print("Valid Predictions:")
+    valid_predictions.show(10)
+    print(f"Mean Average Precision:{map} at: {recommendation_count}")
+    print(f"Precision:{precision} at: {recommendation_count}")
+    print(f"Normalized Discounted Cumulative Gain: {ndcg} at: {recommendation_count}")
+    # print(f"Recall: {recall} at: {recommendation_count}")
+
 
 if __name__ == "__main__":
     spark = SparkSession.builder.appName("CS5344 Project").getOrCreate()

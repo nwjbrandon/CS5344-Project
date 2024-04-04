@@ -6,3 +6,6 @@ __pycache__/
 ml-20m/
 scripts/
 metastore_db/
+env.sh
+stuff.py
+run.sh
