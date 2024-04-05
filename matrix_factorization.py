@@ -53,9 +53,9 @@ class MatrixFactorization:
         predictions = predictions.join(df, [self.user_col, self.item_col])
         return predictions
 
-    def evaluate(self, df, movielens20m: MovieLens20m):
+    def evaluate(self, df, movielens20m: MovieLens20m, recommendation_count):
         evaluator = Evaluator(df, movielens20m)
-        return evaluator.evaluate()
+        return evaluator.evaluate(recommendation_count)
 
 
 def recommend_movies_by_matrix_factorization(movielens20m: MovieLens20m):
@@ -71,9 +71,11 @@ def recommend_movies_by_matrix_factorization(movielens20m: MovieLens20m):
 
     # Filter rows where predictions are not NaN
     valid_predictions = predictions.filter(predictions.prediction != np.nan)
-
-    scores = mf.evaluate(valid_predictions, movielens20m)
-    # {'rmse': 0.8165847881901005, 'hit_rate': 0.40415162228417006, 'coverage': 0.485996040765452}
+    valid_predictions.show(10)
+    recommendation_count = 10
+    scores = mf.evaluate(valid_predictions, movielens20m, recommendation_count)
+    # {'rmse': 0.8165847881901006, 'hit_rate': 0.40415162228417006, 'coverage': 0.485996040765452, 
+    # 'Mean Average Precision': 0.8516845095504275, 'Precision': 0.5089423189881344, 'NDCG': 0.9078648884072624}
     print(scores)
 
 
