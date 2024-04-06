@@ -27,9 +27,12 @@ class Evaluator:
         evaluator = RegressionEvaluator(predictionCol=self.prediction_col, labelCol=self.rating_col, metricName="rmse")
         return evaluator.evaluate(self.prediction_df)
 
-    def compute_hit_rate(self, threshold: float = 3.5):
-        hits = self.prediction_df.filter(self.prediction_df[self.rating_col] >= threshold).filter(self.prediction_df[self.prediction_col] >= threshold).count()
-        total = self.prediction_df.count()
+    def compute_hit_rate(self, recommendation_count, threshold: float = 3.5):
+        windowSpec = Window.partitionBy("userId").orderBy(F.desc("prediction"))
+        top_predictions = self.prediction_df.withColumn("rank", F.rank().over(windowSpec)).filter(F.col("rank")<=recommendation_count)
+
+        hits = top_predictions.filter(top_predictions[self.rating_col] >= threshold).filter(top_predictions[self.prediction_col] >= threshold).count()
+        total = top_predictions.count()
         hit_rate = hits / total if total > 0 else 0
         return hit_rate
 
@@ -88,7 +91,7 @@ class Evaluator:
         topData_rdd = self.df_to_rdd(recommendation_count, threshold_rating = 3.5)
         return {
             "rmse": self.compute_rmse(),
-            "hit_rate": self.compute_hit_rate(),
+            "hit_rate": self.compute_hit_rate(recommendation_count),
             "coverage": self.compute_coverage(),
             "Mean Average Precision": self.meanAveragePrecision(topData_rdd),
             "Precision": self.precision(topData_rdd, recommendation_count),
