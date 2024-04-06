@@ -1,10 +1,13 @@
 from pyspark.sql import SparkSession
-from pyspark.ml.linalg import Vectors
+from pyspark.ml.linalg import Vectors, SparseVector
 from pyspark.ml.feature import VectorAssembler
 from pyspark.ml.stat import Correlation
-from pyspark.sql.functions import col, udf
+from pyspark.sql.functions import col, udf, explode
+from math import sqrt
 from pyspark.sql.types import FloatType
 from pyspark.ml.recommendation import ALS
+from pyspark.ml.linalg import VectorUDT
+
 
 spark=SparkSession.builder.appName('UserNB').getOrCreate()
 spark.conf.set("spark.sql.pivotMaxValues", "27000")
@@ -25,29 +28,63 @@ ratings_df = ratings_df.limit(10000)
 pivot_df = ratings_df.groupby('userId').pivot('movieId').avg('rating')
 pivot_df = pivot_df.fillna(0)
 
-#for printing a 10x10 snippet of pivotdf for debug
-# def printsnip(datfr):
-#     allcols = datfr.columns
-#     firsttencols = allcols[:10]
-#     datfr.limit(10).select(firsttencols).show()
+# for printing a 10x10 snippet of pivotdf for debug
+def printsnip(datfr):
+    allcols = datfr.columns
+    firsttencols = allcols[:10]
+    datfr.limit(10).select(firsttencols).show()
 
-# def printlast(datfr):
-#     allcols = datfr.columns
-#     firsttencols = allcols[-1]
-#     datfr.limit(10).select(firsttencols).show()
+def printlast(datfr):
+    allcols = datfr.columns
+    firsttencols = allcols[-1]
+    datfr.limit(10).select(firsttencols).show()
 
 # printsnip(pivot_df)
 
 
-vector_col = "vec_features"
+vector_col = "features"
 assembler = VectorAssembler(inputCols=pivot_df.columns[1:], outputCol=vector_col)
-vector_df = assembler.transform(pivot_df).select('userId', vector_col)
-# vector_df = assembler.transform(pivot_df)
+# vector_df = assembler.transform(pivot_df).select('userId', vector_col)
+vector_df = assembler.transform(pivot_df)
 
 
 # printsnip(vector_df)
 # printlast(vector_df)
+# print("(*****************)")
+# print(vector_df.select(vector_col).take(1))
 
-print("(*****************)")
-print(vector_df.select(vector_col)[0])
+# Normalize the feature vectors
+def normalize_sparse_vector(v):
+    norm = sqrt(sum([x**2 for x in v.values]))
+    return SparseVector(v.size, v.indices, [x / norm for x in v.values])
 
+normalize_sparse_vector_udf = udf(normalize_sparse_vector, VectorUDT())
+
+normalized_df = vector_df.withColumn("norm_features", normalize_sparse_vector_udf("features"))
+
+# print("(*****************)")
+# printlast(normalized_df)
+
+
+# Fit the ALS model
+als = ALS(maxIter=5, regParam=0.01, userCol="userId", itemCol="movieId", ratingCol="rating",
+          coldStartStrategy="drop", implicitPrefs=True)
+model = als.fit(ratings_df)
+
+# Generate top 10 movie recommendations for a single user
+user_id_for_recommendations = 1  # Replace this with the ID of the user you want recommendations for
+user_recs = model.recommendForUserSubset(normalized_df.filter(col("userId") == user_id_for_recommendations), 10)
+
+# Flatten the recommendations and exclude already rated movies
+rated_movies = ratings_df.filter(col('userId') == user_id_for_recommendations).select('movieId').rdd.flatMap(lambda x: x).collect()
+
+recommendations = user_recs \
+    .withColumn("recommendations", explode("recommendations")) \
+    .select(col("userId"), col("recommendations.movieId"), col("recommendations.rating")) \
+    .filter(~col("movieId").isin(rated_movies))
+
+# Show the recommended movies for the input user
+recommendations.show()
+
+# Stop the Spark session
+spark.stop()
