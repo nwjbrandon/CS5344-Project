@@ -26,7 +26,7 @@ bash popular_movies.sh
 ```
 - Run command to fetch recommendation by genre prefrences (new users)
 ```
-spark-submit --driver-memory 6G --executor-memory 1G initial_recommendation_main.py --genres "Action,Adventure,Sci-Fi"
+bash initial_recommendation.sh
 ```
 - Run script to fetch recommendations by matrix factorization
 ```
