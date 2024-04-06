@@ -1,0 +1,1 @@
+spark-submit --driver-memory 6G --executor-memory 1G initial_recommendation.py --genres "Action,Adventure,Sci-Fi"

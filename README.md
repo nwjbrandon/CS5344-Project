@@ -16,13 +16,13 @@ pip install numpy matplotlib pandas
 ```
 
 ## Run PySpark
-- Run main script to fetch all recommendations
-```
-bash run.sh
-```
 - Run script to fetch recommendations by popularity
 ```
 bash popular_movies.sh
+```
+- Run command to fetch recommendation by genre prefrences (new users)
+```
+bash initial_recommendation.sh
 ```
 - Run script to fetch recommendations by matrix factorization
 ```
@@ -31,10 +31,6 @@ bash matrix_factorization.sh
 - Run script to visualise rating and movie statistics
 ```
 bash movielens_statistics.sh
-```
-- Run command to fetch recommendation by genre prefrences (new users)
-```
-spark-submit --driver-memory 6G --executor-memory 1G initial_recommendation_main.py --genres "Action,Adventure,Sci-Fi"
 ```
 
 ## MovieLens Data Exploration
