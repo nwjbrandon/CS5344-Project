@@ -59,7 +59,6 @@ def normalize_sparse_vector(v):
     return SparseVector(v.size, v.indices, [x / norm for x in v.values])
 
 normalize_sparse_vector_udf = udf(normalize_sparse_vector, VectorUDT())
-
 normalized_df = vector_df.withColumn("norm_features", normalize_sparse_vector_udf("features"))
 
 # print("(*****************)")
@@ -68,23 +67,21 @@ normalized_df = vector_df.withColumn("norm_features", normalize_sparse_vector_ud
 
 # Fit the ALS model
 als = ALS(maxIter=5, regParam=0.01, userCol="userId", itemCol="movieId", ratingCol="rating",
-          coldStartStrategy="drop", implicitPrefs=True)
+          coldStartStrategy="drop", implicitPrefs=False)
 model = als.fit(ratings_df)
 
-# Generate top 10 movie recommendations for a single user
-user_id_for_recommendations = 1  # Replace this with the ID of the user you want recommendations for
-user_recs = model.recommendForUserSubset(normalized_df.filter(col("userId") == user_id_for_recommendations), 10)
+# Generate recommendations for all users
+user_recs = model.recommendForAllUsers(10)
 
-# Flatten the recommendations and exclude already rated movies
-rated_movies = ratings_df.filter(col('userId') == user_id_for_recommendations).select('movieId').rdd.flatMap(lambda x: x).collect()
+# Filter for the specific user and explode the recommendations
+user_id_for_recommendations = 1  # The user ID we want recommendations for
 
-recommendations = user_recs \
-    .withColumn("recommendations", explode("recommendations")) \
-    .select(col("userId"), col("recommendations.movieId"), col("recommendations.rating")) \
-    .filter(~col("movieId").isin(rated_movies))
+recommendations_for_user = user_recs.filter(col("userId") == user_id_for_recommendations) \
+                                    .withColumn("recommendations", explode("recommendations")) \
+                                    .select(col("userId"), col("recommendations.*"))
 
-# Show the recommended movies for the input user
-recommendations.show()
+# Show the recommendations for the user
+recommendations_for_user.show()
 
 # Stop the Spark session
 spark.stop()
