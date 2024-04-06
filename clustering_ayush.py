@@ -1,11 +1,9 @@
+from pyspark.ml.clustering import KMeans
+from pyspark.ml.feature import CountVectorizer
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import explode, split
-from pyspark.ml.feature import CountVectorizer
-from pyspark.ml.clustering import KMeans
 
-spark = SparkSession.builder \
-    .appName("MovieLens Clustering") \
-    .getOrCreate()
+spark = SparkSession.builder.appName("MovieLens Clustering").getOrCreate()
 
 # Load movies data
 movies = spark.read.csv("ml-20m/movies.csv", header=True, inferSchema=True)
