@@ -16,10 +16,6 @@ pip install numpy matplotlib pandas
 ```
 
 ## Run PySpark
-- Run main script to fetch all recommendations
-```
-bash run.sh
-```
 - Run script to fetch recommendations by popularity
 ```
 bash popular_movies.sh
