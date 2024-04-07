@@ -32,6 +32,10 @@ bash matrix_factorization.sh
 ```
 bash movielens_statistics.sh
 ```
+- Run script to fetch recommendation by user comparison
+```
+bash usersim.sh
+```
 
 ## MovieLens Data Exploration
 
