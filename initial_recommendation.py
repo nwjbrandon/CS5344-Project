@@ -6,9 +6,12 @@ from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, explode, split, udf
 from pyspark.sql.types import FloatType
 
+from dataset import MovieLens20m
+
 
 def get_genres_dataset(spark):
-    movies = spark.read.csv("ml-20m/movies.csv", header=True, inferSchema=True)
+    movieLens20m = MovieLens20m(spark)
+    movies = movieLens20m.get_movies_df()
     movies = movies.withColumn("genres", split(col("genres"), "\\|"))
 
     return movies
@@ -61,7 +64,7 @@ def setup_argparser():
 
 
 if __name__ == "__main__":
-    spark = SparkSession.builder.appName("Genre-Based-Movie-Recommender").getOrCreate()
+    spark = SparkSession.builder.appName("CS5344 Project Initial Recommendation").getOrCreate()
 
     top_n_movies_to_recommend = 10
 

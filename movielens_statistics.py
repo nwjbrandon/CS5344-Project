@@ -245,6 +245,6 @@ def compute_movielens_statistics(movielens20m: MovieLens20m):
 
 
 if __name__ == "__main__":
-    spark = SparkSession.builder.appName("CS5344 Project").getOrCreate()
+    spark = SparkSession.builder.appName("CS5344 Project MovieLens Statistics").getOrCreate()
     movielens20m = MovieLens20m(spark=spark)
     compute_movielens_statistics(movielens20m)

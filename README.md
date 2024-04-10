@@ -36,10 +36,6 @@ bash matrix_factorization.sh
 ```
 bash movielens_statistics.sh
 ```
-- Run script to fetch recommendation by user comparison
-```
-bash usersim.sh
-```
 
 ## MovieLens Data Exploration
 
@@ -192,3 +188,4 @@ Mean | 747.84
 
 ## Issues
 - Solve java.lang.OutOfMemoryError: Java heap space (https://stackoverflow.com/questions/50842877/java-lang-outofmemoryerror-java-heap-space-using-docker)
+- Code for recommendation metrics (https://github.com/recommenders-team/recommenders)

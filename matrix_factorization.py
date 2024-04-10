@@ -2,9 +2,9 @@ import numpy as np
 from pyspark.ml.recommendation import ALS
 from pyspark.sql import SparkSession
 
-from constant import RANDOM_SEED
+from constants import SEED
 from dataset import MovieLens20m
-from evaluation import SparkDiversityEvaluation, SparkRankingEvaluation, SparkRatingEvaluation
+from evaluation import SparkRankingEvaluation, SparkRatingEvaluation
 
 
 class MatrixFactorization:
@@ -15,7 +15,7 @@ class MatrixFactorization:
         rating_col: str = "rating",
         rank: int = 5,
         max_iter: int = 10,
-        seed: int = RANDOM_SEED,
+        seed: int = SEED,
     ) -> None:
         self.user_col = user_col
         self.item_col = item_col
@@ -69,7 +69,7 @@ def recommend_movies_by_matrix_factorization(movielens20m: MovieLens20m):
     df.show()
 
     mf = MatrixFactorization()
-    train, test = ratings_df.randomSplit([0.75, 0.25], seed=RANDOM_SEED)
+    train, test = ratings_df.randomSplit([0.75, 0.25], seed=SEED)
 
     mf.fit(train)
     predictions = mf.predict(test)
