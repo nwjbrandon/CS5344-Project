@@ -2,7 +2,7 @@ from functools import lru_cache as lru
 
 import pyspark.sql.functions as F
 from pyspark.ml.evaluation import RegressionEvaluator
-from pyspark.mllib.evaluation import RankingMetrics
+from pyspark.mllib.evaluation import RankingMetrics, RegressionMetrics
 from pyspark.sql.window import Window
 
 from dataset import MovieLens20m
@@ -27,7 +27,7 @@ class Evaluator:
         self.prediction_col = prediction_col
 
     def compute_rmse(self):
-        evaluator = RegressionEvaluator(predictionCol=self.prediction_col, labelCol=self.rating_col, metricName="rmse")
+        evaluator = RegressionMetrics(predictionCol=self.prediction_col, labelCol=self.rating_col, metricName="rmse")
         return evaluator.evaluate(self.prediction_df)
 
     def compute_hit_rate(self, recommendation_count, threshold: float = 3.5):
