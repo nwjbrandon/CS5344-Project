@@ -7,7 +7,7 @@ from pyspark.sql.types import ArrayType, IntegerType
 from constant import RANDOM_SEED
 from dataset import MovieLens20m
 from evaluator import Evaluator
-from spark_evaluator import SparkRatingEvaluation
+from spark_evaluator import SparkDiversityEvaluation, SparkRankingEvaluation, SparkRatingEvaluation
 
 
 class MatrixFactorization:
@@ -77,19 +77,22 @@ def recommend_movies_by_matrix_factorization(movielens20m: MovieLens20m):
     df = df.filter(df["movie_age"] <= 100)
 
     # 19332208
-    df.show() 
+    df.show()
 
     mf = MatrixFactorization()
     train, test = ratings_df.randomSplit([0.9, 0.1], seed=RANDOM_SEED)
 
     mf.fit(train)
     predictions = mf.predict(test)
-    # |userId|movieId|prediction|rating| timestamp|
     valid_predictions = predictions.filter(predictions.prediction != np.nan)
 
+    rating_true = valid_predictions.select(["userId", "movieId", "rating"])
+    rating_pred = valid_predictions.select(["userId", "movieId", "prediction"])
+
+    # Rating
     rating_evaluator = SparkRatingEvaluation(
-        valid_predictions.select(["userId", "movieId" ,"rating"]), 
-        valid_predictions.select(["userId", "movieId" ,"prediction"]),
+        rating_true,
+        rating_pred,
         col_user="userId",
         col_item="movieId",
         col_rating="rating",
@@ -102,22 +105,68 @@ def recommend_movies_by_matrix_factorization(movielens20m: MovieLens20m):
         "exp_var": rating_evaluator.exp_var(),
     }
 
-    # rating_scores: {'rmse': 0.8174848413520778, 'mae': 0.6359884589928386, 'rsquared': 0.39630009925132215, 'exp_var': 0.4076300886113121}
+    # Ranking k = 20
+    ranking_evaluator = SparkRankingEvaluation(
+        rating_true,
+        rating_pred,
+        col_user="userId",
+        col_item="movieId",
+        col_rating="rating",
+        col_prediction="prediction",
+        k=20,
+    )
+    ranking_scores_at_20 = {
+        "precision_at_20": ranking_evaluator.precision_at_k(),
+        "recall_at_20": ranking_evaluator.recall_at_k(),
+        "ndcg_at_20": ranking_evaluator.ndcg_at_k(),
+        "map_at_20": ranking_evaluator.map_at_k(),
+        "map": ranking_evaluator.map(),
+    }
+
+    # Ranking k = 50
+    ranking_evaluator = SparkRankingEvaluation(
+        rating_true,
+        rating_pred,
+        col_user="userId",
+        col_item="movieId",
+        col_rating="rating",
+        col_prediction="prediction",
+        k=50,
+    )
+    ranking_scores_at_50 = {
+        "precision_at_50": ranking_evaluator.precision_at_k(),
+        "recall_at_50": ranking_evaluator.recall_at_k(),
+        "ndcg_at_50": ranking_evaluator.ndcg_at_k(),
+        "map_at_50": ranking_evaluator.map_at_k(),
+        "map": ranking_evaluator.map(),
+    }
+
+    # Ranking k = 100
+    ranking_evaluator = SparkRankingEvaluation(
+        rating_true,
+        rating_pred,
+        col_user="userId",
+        col_item="movieId",
+        col_rating="rating",
+        col_prediction="prediction",
+        k=100,
+    )
+    ranking_scores_at_100 = {
+        "precision_at_100": ranking_evaluator.precision_at_k(),
+        "recall_at_100": ranking_evaluator.recall_at_k(),
+        "ndcg_at_100": ranking_evaluator.ndcg_at_k(),
+        "map_at_100": ranking_evaluator.map_at_k(),
+        "map": ranking_evaluator.map(),
+    }
+
+    # rating_scores: {'rmse': 0.8125284521121838, 'mae': 0.6297998826940571, 'rsquared': 0.4035379062385661, 'exp_var': 0.4112955720459812}
+    # ranking_scores_at_20: {'precision_at_20': 0.47074078715546286, 'recall_at_20': 0.9155656907613267, 'ndcg_at_20': 1.0, 'map_at_20': 1.0, 'map': 0.9155656907613265}
+    # ranking_scores_at_50: {'precision_at_50': 0.25243643708579966, 'recall_at_50': 0.9814030788264771, 'ndcg_at_50': 1.0, 'map_at_50': 1.0, 'map': 0.981403078826477}
+    # ranking_scores_at_100: {'precision_at_100': 0.14064465953572716, 'recall_at_100': 0.9963873027081633, 'ndcg_at_100': 1.0, 'map_at_100': 1.0, 'map': 0.9963873027081638}
     print("rating_scores:", rating_scores)
-
-
-
-
-    # valid_predictions.show()
-    # scores = mf.evaluate(valid_predictions, movielens20m, recommendation_count=10)
-
-    # TOP_K = 10
-    # rank_eval = SparkRankingEvaluation(test, top_all, k = TOP_K, col_user="userId", col_item="movieId", 
-    #                                     col_rating="rating", col_prediction="prediction", 
-    #                                     relevancy_method="top_k")
-
-    # {'rmse': 0.8174848413520778, 'hit_rate': 0.5820735777059817, 'coverage': 0.63314759146565, 'Mean Average Precision': 0.8521349892412887, 'Precision': 0.5096894848270992, 'NDCG': 0.9081199219876757}
-    # print(scores)
+    print("ranking_scores_at_20:", ranking_scores_at_20)
+    print("ranking_scores_at_50:", ranking_scores_at_50)
+    print("ranking_scores_at_100:", ranking_scores_at_100)
 
 
 if __name__ == "__main__":

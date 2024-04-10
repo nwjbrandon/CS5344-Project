@@ -4,7 +4,9 @@ FROM ubuntu:18.04
 # ARG ARCHITECTURE=x86_64
 # macos
 ARG ARCHITECTURE=aarch64
-
+ARG SPARK_VERSION=3.0.1
+ARG HADOOP_VERSION_SHORT=3.2
+ARG HADOOP_VERSION=3.2.0
 
 WORKDIR /tmp
 
@@ -13,20 +15,10 @@ RUN apt-get update
 RUN apt-get install openjdk-8-jdk -y
 RUN apt-get install vim wget -y
 
-# Install scala
-RUN wget https://downloads.lightbend.com/scala/2.12.4/scala-2.12.4.tgz 
-RUN tar xvf scala-2.12.4.tgz --directory /usr/local
-ENV PATH="${PATH}:/usr/local/scala-2.12.4/bin"
-
-# Install maven
-RUN wget https://archive.apache.org/dist/maven/maven-3/3.5.2/binaries/apache-maven-3.5.2-bin.tar.gz
-RUN tar xvf apache-maven-3.5.2-bin.tar.gz --directory /usr/local
-ENV PATH="${PATH}:/usr/local/apache-maven-3.5.2/bin"
-
 # Install spark
-RUN wget https://archive.apache.org/dist/spark/spark-2.2.1/spark-2.2.1-bin-hadoop2.7.tgz
-RUN tar xvf spark-2.2.1-bin-hadoop2.7.tgz --directory /usr/local
-ENV PATH="${PATH}:/usr/local/spark-2.2.1-bin-hadoop2.7/bin"
+RUN wget https://archive.apache.org/dist/spark/spark-${SPARK_VERSION}/spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION_SHORT}.tgz
+RUN tar xvf spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION_SHORT}.tgz --directory /usr/local
+ENV PATH="${PATH}:/usr/local/spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION_SHORT}/bin"
 
 # Install python3.6
 ENV PATH="/root/miniconda3/bin:${PATH}"
@@ -35,7 +27,9 @@ RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-${ARCHITECT
 && mkdir /root/.conda \
 && bash Miniconda3-latest-Linux-${ARCHITECTURE}.sh -b \
 && rm -f Miniconda3-latest-Linux-${ARCHITECTURE}.sh
-RUN conda create -n CS5344 python=3.7 -y
+
+COPY environment.yml .
+RUN conda env create -f environment.yml -y
 
 WORKDIR /data
 RUN echo "source ~/miniconda3/etc/profile.d/conda.sh" >> ~/.bashrc

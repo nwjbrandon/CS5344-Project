@@ -7,29 +7,16 @@ Reference: https://github.com/recommenders-team/recommenders
 import numpy as np
 
 try:
-    from pyspark.mllib.evaluation import RegressionMetrics, RankingMetrics
-    from pyspark.sql import Window, DataFrame
-    from pyspark.sql.functions import col, row_number, expr
-    from pyspark.sql.functions import udf
     import pyspark.sql.functions as F
-    from pyspark.sql.types import IntegerType, DoubleType, StructType, StructField
     from pyspark.ml.linalg import VectorUDT
+    from pyspark.mllib.evaluation import RankingMetrics, RegressionMetrics
+    from pyspark.sql import DataFrame, Window
+    from pyspark.sql.functions import col, expr, row_number, udf
+    from pyspark.sql.types import DoubleType, IntegerType, StructField, StructType
 except ImportError:
     pass  # skip this import if we are in pure python environment
 
-from constants import (
-    DEFAULT_PREDICTION_COL,
-    DEFAULT_USER_COL,
-    DEFAULT_ITEM_COL,
-    DEFAULT_RATING_COL,
-    DEFAULT_RELEVANCE_COL,
-    DEFAULT_SIMILARITY_COL,
-    DEFAULT_ITEM_FEATURES_COL,
-    DEFAULT_ITEM_SIM_MEASURE,
-    DEFAULT_TIMESTAMP_COL,
-    DEFAULT_K,
-    DEFAULT_THRESHOLD,
-)
+from constants import DEFAULT_ITEM_COL, DEFAULT_ITEM_FEATURES_COL, DEFAULT_ITEM_SIM_MEASURE, DEFAULT_K, DEFAULT_PREDICTION_COL, DEFAULT_RATING_COL, DEFAULT_RELEVANCE_COL, DEFAULT_SIMILARITY_COL, DEFAULT_THRESHOLD, DEFAULT_TIMESTAMP_COL, DEFAULT_USER_COL
 
 
 class SparkRatingEvaluation:
@@ -67,14 +54,10 @@ class SparkRatingEvaluation:
 
         # Check if inputs are Spark DataFrames.
         if not isinstance(self.rating_true, DataFrame):
-            raise TypeError(
-                "rating_true should be but is not a Spark DataFrame"
-            )  # pragma : No Cover
+            raise TypeError("rating_true should be but is not a Spark DataFrame")  # pragma : No Cover
 
         if not isinstance(self.rating_pred, DataFrame):
-            raise TypeError(
-                "rating_pred should be but is not a Spark DataFrame"
-            )  # pragma : No Cover
+            raise TypeError("rating_pred should be but is not a Spark DataFrame")  # pragma : No Cover
 
         # Check if columns exist.
         true_columns = self.rating_true.columns
@@ -93,13 +76,9 @@ class SparkRatingEvaluation:
             raise ValueError("Schema of rating_true not valid. Missing Rating Col")
 
         if self.col_user not in pred_columns:
-            raise ValueError(
-                "Schema of rating_pred not valid. Missing User Col"
-            )  # pragma : No Cover
+            raise ValueError("Schema of rating_pred not valid. Missing User Col")  # pragma : No Cover
         if self.col_item not in pred_columns:
-            raise ValueError(
-                "Schema of rating_pred not valid. Missing Item Col"
-            )  # pragma : No Cover
+            raise ValueError("Schema of rating_pred not valid. Missing Item Col")  # pragma : No Cover
         if self.col_prediction not in pred_columns:
             raise ValueError("Schema of rating_pred not valid. Missing Prediction Col")
 
@@ -114,17 +93,9 @@ class SparkRatingEvaluation:
             col(self.col_prediction).cast("double").alias("prediction"),
         )
 
-        self.y_pred_true = (
-            self.rating_true.join(
-                self.rating_pred, [self.col_user, self.col_item], "inner"
-            )
-            .drop(self.col_user)
-            .drop(self.col_item)
-        )
+        self.y_pred_true = self.rating_true.join(self.rating_pred, [self.col_user, self.col_item], "inner").drop(self.col_user).drop(self.col_item)
 
-        self.metrics = RegressionMetrics(
-            self.y_pred_true.rdd.map(lambda x: (x.prediction, x.label))
-        )
+        self.metrics = RegressionMetrics(self.y_pred_true.rdd.map(lambda x: (x.prediction, x.label)))
 
     def rmse(self):
         """Calculate Root Mean Squared Error.
@@ -219,37 +190,26 @@ class SparkRankingEvaluation:
 
         # Check if inputs are Spark DataFrames.
         if not isinstance(self.rating_true, DataFrame):
-            raise TypeError(
-                "rating_true should be but is not a Spark DataFrame"
-            )  # pragma : No Cover
+            raise TypeError("rating_true should be but is not a Spark DataFrame")  # pragma : No Cover
 
         if not isinstance(self.rating_pred, DataFrame):
-            raise TypeError(
-                "rating_pred should be but is not a Spark DataFrame"
-            )  # pragma : No Cover
+            raise TypeError("rating_pred should be but is not a Spark DataFrame")  # pragma : No Cover
 
         # Check if columns exist.
         true_columns = self.rating_true.columns
         pred_columns = self.rating_pred.columns
 
         if self.col_user not in true_columns:
-            raise ValueError(
-                "Schema of rating_true not valid. Missing User Col: "
-                + str(true_columns)
-            )
+            raise ValueError("Schema of rating_true not valid. Missing User Col: " + str(true_columns))
         if self.col_item not in true_columns:
             raise ValueError("Schema of rating_true not valid. Missing Item Col")
         if self.col_rating not in true_columns:
             raise ValueError("Schema of rating_true not valid. Missing Rating Col")
 
         if self.col_user not in pred_columns:
-            raise ValueError(
-                "Schema of rating_pred not valid. Missing User Col"
-            )  # pragma : No Cover
+            raise ValueError("Schema of rating_pred not valid. Missing User Col")  # pragma : No Cover
         if self.col_item not in pred_columns:
-            raise ValueError(
-                "Schema of rating_pred not valid. Missing Item Col"
-            )  # pragma : No Cover
+            raise ValueError("Schema of rating_pred not valid. Missing Item Col")  # pragma : No Cover
         if self.col_prediction not in pred_columns:
             raise ValueError("Schema of rating_pred not valid. Missing Prediction Col")
 
@@ -262,11 +222,7 @@ class SparkRankingEvaluation:
         }
 
         if relevancy_method not in relevant_func:
-            raise ValueError(
-                "relevancy_method should be one of {}".format(
-                    list(relevant_func.keys())
-                )
-            )
+            raise ValueError("relevancy_method should be one of {}".format(list(relevant_func.keys())))
 
         self.rating_pred = (
             relevant_func[relevancy_method](
@@ -292,15 +248,9 @@ class SparkRankingEvaluation:
         """Calculate ranking metrics."""
         self._items_for_user_pred = self.rating_pred
 
-        self._items_for_user_true = (
-            self.rating_true.groupBy(self.col_user)
-            .agg(expr("collect_list(" + self.col_item + ") as ground_truth"))
-            .select(self.col_user, "ground_truth")
-        )
+        self._items_for_user_true = self.rating_true.groupBy(self.col_user).agg(expr("collect_list(" + self.col_item + ") as ground_truth")).select(self.col_user, "ground_truth")
 
-        self._items_for_user_all = self._items_for_user_pred.join(
-            self._items_for_user_true, on=self.col_user
-        ).drop(self.col_user)
+        self._items_for_user_all = self._items_for_user_pred.join(self._items_for_user_true, on=self.col_user).drop(self.col_user)
 
         return RankingMetrics(self._items_for_user_all.rdd)
 
@@ -390,14 +340,7 @@ def _get_top_k_items(
     window_spec = Window.partitionBy(col_user).orderBy(col(col_rating).desc())
 
     # this does not work for rating of the same value.
-    items_for_user = (
-        dataframe.select(
-            col_user, col_item, col_rating, row_number().over(window_spec).alias("rank")
-        )
-        .where(col("rank") <= k)
-        .groupby(col_user)
-        .agg(F.collect_list(col_item).alias(col_prediction))
-    )
+    items_for_user = dataframe.select(col_user, col_item, col_rating, row_number().over(window_spec).alias("rank")).where(col("rank") <= k).groupby(col_user).agg(F.collect_list(col_item).alias(col_prediction))
 
     return items_for_user
 
@@ -434,9 +377,7 @@ def _get_relevant_items_by_threshold(
         dataframe.orderBy(col_rating, ascending=False)
         .where(col_rating + " >= " + str(threshold))
         .select(col_user, col_item, col_rating)
-        .withColumn(
-            col_prediction, F.collect_list(col_item).over(Window.partitionBy(col_user))
-        )
+        .withColumn(col_prediction, F.collect_list(col_item).over(Window.partitionBy(col_user)))
         .select(col_user, col_prediction)
         .dropDuplicates()
     )
@@ -474,13 +415,9 @@ def _get_relevant_items_by_timestamp(
     window_spec = Window.partitionBy(col_user).orderBy(col(col_timestamp).desc())
 
     items_for_user = (
-        dataframe.select(
-            col_user, col_item, col_rating, row_number().over(window_spec).alias("rank")
-        )
+        dataframe.select(col_user, col_item, col_rating, row_number().over(window_spec).alias("rank"))
         .where(col("rank") <= k)
-        .withColumn(
-            col_prediction, F.collect_list(col_item).over(Window.partitionBy(col_user))
-        )
+        .withColumn(col_prediction, F.collect_list(col_item).over(Window.partitionBy(col_user)))
         .select(col_user, col_prediction)
         .dropDuplicates([col_user, col_prediction])
     )
@@ -566,14 +503,10 @@ class SparkDiversityEvaluation:
         if col_relevance is None:
             self.col_relevance = DEFAULT_RELEVANCE_COL
             # relevance term, default is 1 (relevant) for all
-            self.reco_df = reco_df.select(
-                col_user, col_item, F.lit(1.0).alias(self.col_relevance)
-            )
+            self.reco_df = reco_df.select(col_user, col_item, F.lit(1.0).alias(self.col_relevance))
         else:
             self.col_relevance = col_relevance
-            self.reco_df = reco_df.select(
-                col_user, col_item, F.col(self.col_relevance).cast(DoubleType())
-            )
+            self.reco_df = reco_df.select(col_user, col_item, F.col(self.col_relevance).cast(DoubleType()))
 
         if self.item_sim_measure == "item_feature_vector":
             self.col_item_features = DEFAULT_ITEM_FEATURES_COL
@@ -585,28 +518,15 @@ class SparkDiversityEvaluation:
             )
             if self.item_feature_df is not None:
                 if str(required_schema) != str(item_feature_df.schema):
-                    raise Exception(
-                        "Incorrect schema! item_feature_df should have schema "
-                        f"{str(required_schema)} but have {str(item_feature_df.schema)}"
-                    )
+                    raise Exception("Incorrect schema! item_feature_df should have schema " f"{str(required_schema)} but have {str(item_feature_df.schema)}")
             else:
-                raise Exception(
-                    "item_feature_df not specified! item_feature_df must be provided "
-                    "if choosing to use item_feature_vector to calculate item similarity. "
-                    f"item_feature_df should have schema {str(required_schema)}"
-                )
+                raise Exception("item_feature_df not specified! item_feature_df must be provided " "if choosing to use item_feature_vector to calculate item similarity. " f"item_feature_df should have schema {str(required_schema)}")
 
         # check if reco_df contains any user_item pairs that are already shown in train_df
-        count_intersection = (
-            self.train_df.select(self.col_user, self.col_item)
-            .intersect(self.reco_df.select(self.col_user, self.col_item))
-            .count()
-        )
+        count_intersection = self.train_df.select(self.col_user, self.col_item).intersect(self.reco_df.select(self.col_user, self.col_item)).count()
 
         if count_intersection != 0:
-            raise Exception(
-                "reco_df should not contain any user_item pairs that are already shown in train_df"
-            )
+            raise Exception("reco_df should not contain any user_item pairs that are already shown in train_df")
 
     def _get_pairwise_items(self, df):
         """Get pairwise combinations of items per user (ignoring duplicate pairs [1,2] == [2,1])"""
@@ -630,9 +550,7 @@ class SparkDiversityEvaluation:
             # calculate item-item similarity based on item feature vectors
             self._get_item_feature_similarity(n_partitions)
         else:
-            raise Exception(
-                "item_sim_measure not recognized! The available options include 'item_cooccurrence_count' and 'item_feature_vector'."
-            )
+            raise Exception("item_sim_measure not recognized! The available options include 'item_cooccurrence_count' and 'item_feature_vector'.")
         return self.df_cosine_similarity
 
     def _get_cooccurrence_similarity(self, n_partitions):
@@ -669,10 +587,7 @@ class SparkDiversityEvaluation:
                 .select(
                     "i1",
                     "i2",
-                    (
-                        F.col("count")
-                        / (F.col("i1_sqrt_count") * F.col("i2_sqrt_count"))
-                    ).alias(self.sim_col),
+                    (F.col("count") / (F.col("i1_sqrt_count") * F.col("i2_sqrt_count"))).alias(self.sim_col),
                 )
                 .repartition(n_partitions, "i1", "i2")
             )
@@ -722,14 +637,7 @@ class SparkDiversityEvaluation:
             similarity_df = self._get_cosine_similarity()
             # Fillna(0) is needed in the cases where similarity_df does not have an entry for a pair of items.
             # e.g. i1 and i2 have never occurred together.
-            self.df_intralist_similarity = (
-                pairs.join(similarity_df, on=["i1", "i2"], how="left")
-                .fillna(0)
-                .filter(F.col("i1") != F.col("i2"))
-                .groupBy(self.col_user)
-                .agg(F.mean(self.sim_col).alias("avg_il_sim"))
-                .select(self.col_user, "avg_il_sim")
-            )
+            self.df_intralist_similarity = pairs.join(similarity_df, on=["i1", "i2"], how="left").fillna(0).filter(F.col("i1") != F.col("i2")).groupBy(self.col_user).agg(F.mean(self.sim_col).alias("avg_il_sim")).select(self.col_user, "avg_il_sim")
         return self.df_intralist_similarity
 
     def user_diversity(self):
@@ -746,13 +654,7 @@ class SparkDiversityEvaluation:
         """
         if self.df_user_diversity is None:
             self.df_intralist_similarity = self._get_intralist_similarity(self.reco_df)
-            self.df_user_diversity = (
-                self.df_intralist_similarity.withColumn(
-                    "user_diversity", 1 - F.col("avg_il_sim")
-                )
-                .select(self.col_user, "user_diversity")
-                .orderBy(self.col_user)
-            )
+            self.df_user_diversity = self.df_intralist_similarity.withColumn("user_diversity", 1 - F.col("avg_il_sim")).select(self.col_user, "user_diversity").orderBy(self.col_user)
         return self.df_user_diversity
 
     def diversity(self):
@@ -763,9 +665,7 @@ class SparkDiversityEvaluation:
         """
         if self.avg_diversity is None:
             self.df_user_diversity = self.user_diversity()
-            self.avg_diversity = self.df_user_diversity.agg(
-                {"user_diversity": "mean"}
-            ).first()[0]
+            self.avg_diversity = self.df_user_diversity.agg({"user_diversity": "mean"}).first()[0]
         return self.avg_diversity
 
     # Novelty metrics
@@ -790,13 +690,7 @@ class SparkDiversityEvaluation:
         """
         if self.df_item_novelty is None:
             n_records = self.train_df.count()
-            self.df_item_novelty = (
-                self.train_df.groupBy(self.col_item)
-                .count()
-                .withColumn("item_novelty", -F.log2(F.col("count") / n_records))
-                .select(self.col_item, "item_novelty")
-                .orderBy(self.col_item)
-            )
+            self.df_item_novelty = self.train_df.groupBy(self.col_item).count().withColumn("item_novelty", -F.log2(F.col("count") / n_records)).select(self.col_item, "item_novelty").orderBy(self.col_item)
         return self.df_item_novelty
 
     def novelty(self):
@@ -814,14 +708,7 @@ class SparkDiversityEvaluation:
         if self.avg_novelty is None:
             self.df_item_novelty = self.historical_item_novelty()
             n_recommendations = self.reco_df.count()
-            self.avg_novelty = (
-                self.reco_df.groupBy(self.col_item)
-                .count()
-                .join(self.df_item_novelty, self.col_item)
-                .selectExpr("sum(count * item_novelty)")
-                .first()[0]
-                / n_recommendations
-            )
+            self.avg_novelty = self.reco_df.groupBy(self.col_item).count().join(self.df_item_novelty, self.col_item).selectExpr("sum(count * item_novelty)").first()[0] / n_recommendations
         return self.avg_novelty
 
     # Serendipity metrics
@@ -848,25 +735,17 @@ class SparkDiversityEvaluation:
                 self.reco_df.select(
                     self.col_user,
                     self.col_item,
-                    F.col(self.col_item).alias(
-                        "reco_item_tmp"
-                    ),  # duplicate col_item to keep
+                    F.col(self.col_item).alias("reco_item_tmp"),  # duplicate col_item to keep
                 )
                 .join(
-                    self.train_df.select(
-                        self.col_user, F.col(self.col_item).alias("train_item_tmp")
-                    ),
+                    self.train_df.select(self.col_user, F.col(self.col_item).alias("train_item_tmp")),
                     on=[self.col_user],
                 )
                 .select(
                     self.col_user,
                     self.col_item,
-                    F.least(F.col("reco_item_tmp"), F.col("train_item_tmp")).alias(
-                        "i1"
-                    ),
-                    F.greatest(F.col("reco_item_tmp"), F.col("train_item_tmp")).alias(
-                        "i2"
-                    ),
+                    F.least(F.col("reco_item_tmp"), F.col("train_item_tmp")).alias("i1"),
+                    F.greatest(F.col("reco_item_tmp"), F.col("train_item_tmp")).alias("i2"),
                 )
                 .join(self.df_cosine_similarity, on=["i1", "i2"], how="left")
                 .fillna(0)
@@ -875,8 +754,7 @@ class SparkDiversityEvaluation:
                 .join(self.reco_df, on=[self.col_user, self.col_item])
                 .withColumn(
                     "user_item_serendipity",
-                    (1 - F.col("avg_item2interactedHistory_sim"))
-                    * F.col(self.col_relevance),
+                    (1 - F.col("avg_item2interactedHistory_sim")) * F.col(self.col_relevance),
                 )
                 .select(self.col_user, self.col_item, "user_item_serendipity")
                 .orderBy(self.col_user, self.col_item)
@@ -891,11 +769,7 @@ class SparkDiversityEvaluation:
         """
         if self.df_user_serendipity is None:
             self.df_user_item_serendipity = self.user_item_serendipity()
-            self.df_user_serendipity = (
-                self.df_user_item_serendipity.groupBy(self.col_user)
-                .agg(F.mean("user_item_serendipity").alias("user_serendipity"))
-                .orderBy(self.col_user)
-            )
+            self.df_user_serendipity = self.df_user_item_serendipity.groupBy(self.col_user).agg(F.mean("user_item_serendipity").alias("user_serendipity")).orderBy(self.col_user)
         return self.df_user_serendipity
 
     def serendipity(self):
@@ -906,9 +780,7 @@ class SparkDiversityEvaluation:
         """
         if self.avg_serendipity is None:
             self.df_user_serendipity = self.user_serendipity()
-            self.avg_serendipity = self.df_user_serendipity.agg(
-                {"user_serendipity": "mean"}
-            ).first()[0]
+            self.avg_serendipity = self.df_user_serendipity.agg({"user_serendipity": "mean"}).first()[0]
         return self.avg_serendipity
 
     # Coverage metrics
@@ -927,9 +799,7 @@ class SparkDiversityEvaluation:
         # distinct item count in reco_df
         count_distinct_item_reco = self.reco_df.select(self.col_item).distinct().count()
         # distinct item count in train_df
-        count_distinct_item_train = (
-            self.train_df.select(self.col_item).distinct().count()
-        )
+        count_distinct_item_train = self.train_df.select(self.col_item).distinct().count()
 
         # catalog coverage
         c_coverage = count_distinct_item_reco / count_distinct_item_train
@@ -952,9 +822,7 @@ class SparkDiversityEvaluation:
 
         # the number of total recommendations
         count_row_reco = self.reco_df.count()
-        df_entropy = df_itemcnt_reco.withColumn(
-            "p(i)", F.col("count") / count_row_reco
-        ).withColumn("entropy(i)", F.col("p(i)") * F.log2(F.col("p(i)")))
+        df_entropy = df_itemcnt_reco.withColumn("p(i)", F.col("count") / count_row_reco).withColumn("entropy(i)", F.col("p(i)") * F.log2(F.col("p(i)")))
         # distributional coverage
         d_coverage = -df_entropy.agg(F.sum("entropy(i)")).collect()[0][0]
 
