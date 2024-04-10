@@ -58,6 +58,6 @@ class MovieLens20m:
         return df
 
 
-class MovieLens10m(MovieLens20m):
+class MovieLens1m(MovieLens20m):
     def __init__(self, spark, data_dir: str = "ml-1m", movie_fname: str = "movies.dat", ratings_fname: str = "ratings.dat", delimiter: str = "::") -> None:
         super().__init__(spark, data_dir, movie_fname, ratings_fname, delimiter)

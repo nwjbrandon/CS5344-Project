@@ -2,7 +2,7 @@ import numpy as np
 import pyspark.sql.functions as F
 from pyspark.sql import SparkSession
 
-from dataset import MovieLens20m, MovieLens10m
+from dataset import MovieLens20m
 
 
 class PopularMovies:
@@ -54,5 +54,6 @@ def recommend_movies_by_popularity(movielens20m: MovieLens20m):
 
 if __name__ == "__main__":
     spark = SparkSession.builder.appName("CS5344 Project Popular Movies").getOrCreate()
+    # Import to MovieLens1m to test on a smaller dataset instead
     movielens20m = MovieLens20m(spark=spark)
     recommend_movies_by_popularity(movielens20m)
