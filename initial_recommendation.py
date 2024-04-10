@@ -1,10 +1,9 @@
 import argparse
 
 import numpy as np
-from pyspark.ml.feature import CountVectorizer, Tokenizer
-from pyspark.ml.linalg import DenseVector, SparseVector
+from pyspark.ml.feature import CountVectorizer
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, explode, lit, split, udf
+from pyspark.sql.functions import col, explode, split, udf
 from pyspark.sql.types import FloatType
 
 

@@ -6,13 +6,17 @@
 
 ## Install dependencies
 - Install docker (Refer to Dockerfile for individual dependencies)
-- Build docker image and enter docker container via bash
+- Build docker image and enter docker container via bash (Tested for Mac)
 ```
 bash env.sh
 ```
-- Install additional dependencies inside docker container bash shell
+- Docker container will contain the following dependencies
 ```
-pip install numpy matplotlib pandas
+openjdk8
+spark-3.0.1-bin-hadoop3.2
+numpy==1.21.6
+matplotlib==3.5.3
+pandas==1.3.5
 ```
 
 ## Run PySpark

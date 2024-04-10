@@ -1,6 +1,5 @@
 import os
 
-import numpy as np
 import pyspark.sql.functions as F
 from pyspark.sql.types import FloatType, IntegerType, StringType, StructField, StructType
 

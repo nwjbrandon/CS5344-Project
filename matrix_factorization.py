@@ -1,13 +1,10 @@
 import numpy as np
-import pyspark.sql.functions as F
 from pyspark.ml.recommendation import ALS
 from pyspark.sql import SparkSession
-from pyspark.sql.types import ArrayType, IntegerType
 
 from constant import RANDOM_SEED
 from dataset import MovieLens20m
-from evaluator import Evaluator
-from spark_evaluator import SparkDiversityEvaluation, SparkRankingEvaluation, SparkRatingEvaluation
+from evaluation import SparkDiversityEvaluation, SparkRankingEvaluation, SparkRatingEvaluation
 
 
 class MatrixFactorization:
@@ -45,18 +42,6 @@ class MatrixFactorization:
         predictions = self.model.transform(df.select([self.user_col, self.item_col]))
         predictions = predictions.join(df, [self.user_col, self.item_col])
         return predictions
-
-    def evaluate(self, df, movielens20m: MovieLens20m, recommendation_count):
-        evaluator = Evaluator(df, movielens20m)
-        return evaluator.evaluate(recommendation_count)
-
-    def recommend_for_all_users(self, k):
-        return self.model.recommendForAllUsers(k)
-
-
-@F.udf(returnType=ArrayType(IntegerType()))
-def get_recommended_movie_ids(recommendations):
-    return [recommendation["movieId"] for recommendation in recommendations]
 
 
 def recommend_movies_by_matrix_factorization(movielens20m: MovieLens20m):
