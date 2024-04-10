@@ -49,7 +49,7 @@ class MovieLens20m:
         return self.ratings_df.groupBy("movieId").agg(F.count("userId").alias("number_of_rating_per_movie"), F.avg("rating").alias("average_rating_per_movie"), F.stddev("rating").alias("standard_deviation_rating_per_movie"))
 
     def get_ratings_per_user(self):
-        return self.ratings_df.groupBy("userId").agg(F.count("userId").alias("number_of_rating_per_user"))
+        return self.ratings_df.groupBy("userId").agg(F.count("userId").alias("number_of_rating_per_user"), F.avg("rating").alias("average_rating_per_user"))
 
     def get_movie_age(self, current_year=2024):
         df = self.movies_df.select(["movieID", "title"])
