@@ -1,5 +1,7 @@
 import os
 
+import numpy as np
+import pyspark.sql.functions as F
 from pyspark.sql.types import FloatType, IntegerType, StringType, StructField, StructType
 
 schema_ratings = StructType(
@@ -35,3 +37,24 @@ class MovieLens20m:
 
     def get_ratings_df(self):
         return self.ratings_df
+
+    def extract_features(self):
+        df = self.movies_df.join(self.ratings_df, ["movieID"])
+        df = df.join(self.get_movie_age(), ["movieID"])
+        df = df.join(self.get_ratings_per_movie(), ["movieID"])
+        df = df.join(self.get_ratings_per_user(), ["userID"])
+        return df
+
+    def get_ratings_per_movie(self):
+        return self.ratings_df.groupBy("movieId").agg(F.count("userId").alias("number_of_rating_of_movie"), F.avg("rating").alias("average_rating_of_moive"), F.stddev("rating").alias("standard_deviation_rating_of_movie"))
+
+    def get_ratings_per_user(self):
+        return self.ratings_df.groupBy("userId").agg(F.count("userId").alias("number_of_rating_of_user"))
+
+    def get_movie_age(self, current_year=2024):
+        df = self.movies_df.select(["movieID", "title"])
+        df = df.withColumn("released_year", F.regexp_extract(F.col("title"), r"(?<=\()(\d+)(?=\))", 1).cast(IntegerType()))
+        df = df.withColumn("movie_age", current_year - df["released_year"])
+        df = df.filter(df.movie_age != np.nan)
+        df = df.select(["movieID", "released_year", "movie_age"])
+        return df

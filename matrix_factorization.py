@@ -59,24 +59,25 @@ class MatrixFactorization:
 
 
 def recommend_movies_by_matrix_factorization(movielens20m: MovieLens20m):
-    ratings_df = movielens20m.get_ratings_df()
+    df = movielens20m.extract_features()
+    df.show()
 
-    n_rating_50_percentile = 18
-    mf = MatrixFactorization()
-    ratings_df = mf.preprocess(ratings_df, min_n_rating_threshold=n_rating_50_percentile)
+    # n_rating_50_percentile = 18
+    # mf = MatrixFactorization()
+    # ratings_df = mf.preprocess(ratings_df, min_n_rating_threshold=n_rating_50_percentile)
 
-    train, test = ratings_df.randomSplit([0.9, 0.1], seed=RANDOM_SEED)
-    mf.fit(train)
-    predictions = mf.predict(test)
+    # train, test = ratings_df.randomSplit([0.9, 0.1], seed=RANDOM_SEED)
+    # mf.fit(train)
+    # predictions = mf.predict(test)
 
-    # Filter rows where predictions are not NaN
-    valid_predictions = predictions.filter(predictions.prediction != np.nan)
-    valid_predictions.show(10)
-    recommendation_count = 10
-    scores = mf.evaluate(valid_predictions, movielens20m, recommendation_count)
-    # {'rmse': 0.8165847881901006, 'hit_rate': 0.40415162228417006, 'coverage': 0.485996040765452, 
-    # 'Mean Average Precision': 0.8516845095504275, 'Precision': 0.5089423189881344, 'NDCG': 0.9078648884072624}
-    print(scores)
+    # # Filter rows where predictions are not NaN
+    # valid_predictions = predictions.filter(predictions.prediction != np.nan)
+    # valid_predictions.show(10)
+    # recommendation_count = 10
+    # scores = mf.evaluate(valid_predictions, movielens20m, recommendation_count)
+    # # {'rmse': 0.8165847881901006, 'hit_rate': 0.40415162228417006, 'coverage': 0.485996040765452,
+    # # 'Mean Average Precision': 0.8516845095504275, 'Precision': 0.5089423189881344, 'NDCG': 0.9078648884072624}
+    # print(scores)
 
 
 if __name__ == "__main__":
