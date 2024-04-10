@@ -49,6 +49,9 @@ class MatrixFactorization:
         return predictions
 
     def get_top_k_recommendations(self, train):
+        """
+        Reference: https://github.com/recommenders-team/recommenders
+        """
         # Get the cross join of all user-item pairs and score them.
         users = train.select(DEFAULT_USER_COL).distinct()
         items = train.select(DEFAULT_ITEM_COL).distinct()
