@@ -26,9 +26,13 @@ class MatrixFactorization:
         self.prediction_col = "prediction"
 
         self.als = ALS(
-            rank=self.rank,
-            maxIter=self.max_iter,
-            seed=self.seed,
+            rank=10,
+            maxIter=15,
+            implicitPrefs=False,
+            regParam=0.05,
+            coldStartStrategy="drop",
+            nonnegative=False,
+            seed=42,
             userCol=self.user_col,
             itemCol=self.item_col,
             ratingCol=self.rating_col,
@@ -65,14 +69,14 @@ def recommend_movies_by_matrix_factorization(movielens20m: MovieLens20m):
     df.show()
 
     mf = MatrixFactorization()
-    train, test = ratings_df.randomSplit([0.9, 0.1], seed=RANDOM_SEED)
+    train, test = ratings_df.randomSplit([0.75, 0.25], seed=RANDOM_SEED)
 
     mf.fit(train)
     predictions = mf.predict(test)
-    valid_predictions = predictions.filter(predictions.prediction != np.nan)
+    # predictions = predictions.filter(predictions.prediction != np.nan)
 
-    rating_true = valid_predictions.select(["userId", "movieId", "rating"])
-    rating_pred = valid_predictions.select(["userId", "movieId", "prediction"])
+    rating_true = predictions.select(["userId", "movieId", "rating"])
+    rating_pred = predictions.select(["userId", "movieId", "prediction"])
 
     # Rating
     rating_evaluator = SparkRatingEvaluation(
@@ -88,6 +92,24 @@ def recommend_movies_by_matrix_factorization(movielens20m: MovieLens20m):
         "mae": rating_evaluator.mae(),
         "rsquared": rating_evaluator.rsquared(),
         "exp_var": rating_evaluator.exp_var(),
+    }
+
+    # Ranking k = 10
+    ranking_evaluator = SparkRankingEvaluation(
+        rating_true,
+        rating_pred,
+        col_user="userId",
+        col_item="movieId",
+        col_rating="rating",
+        col_prediction="prediction",
+        k=10,
+    )
+    ranking_scores_at_10 = {
+        "precision_at_10": ranking_evaluator.precision_at_k(),
+        "recall_at_10": ranking_evaluator.recall_at_k(),
+        "ndcg_at_10": ranking_evaluator.ndcg_at_k(),
+        "map_at_10": ranking_evaluator.map_at_k(),
+        "map": ranking_evaluator.map(),
     }
 
     # Ranking k = 20
@@ -144,11 +166,13 @@ def recommend_movies_by_matrix_factorization(movielens20m: MovieLens20m):
         "map": ranking_evaluator.map(),
     }
 
-    # rating_scores: {'rmse': 0.8125284521121838, 'mae': 0.6297998826940571, 'rsquared': 0.4035379062385661, 'exp_var': 0.4112955720459812}
-    # ranking_scores_at_20: {'precision_at_20': 0.47074078715546286, 'recall_at_20': 0.9155656907613267, 'ndcg_at_20': 1.0, 'map_at_20': 1.0, 'map': 0.9155656907613265}
-    # ranking_scores_at_50: {'precision_at_50': 0.25243643708579966, 'recall_at_50': 0.9814030788264771, 'ndcg_at_50': 1.0, 'map_at_50': 1.0, 'map': 0.981403078826477}
-    # ranking_scores_at_100: {'precision_at_100': 0.14064465953572716, 'recall_at_100': 0.9963873027081633, 'ndcg_at_100': 1.0, 'map_at_100': 1.0, 'map': 0.9963873027081638}
+    # rating_scores: {'rmse': 0.7921513406842974, 'mae': 0.6115370079657217, 'rsquared': 0.4328377265483636, 'exp_var': 0.44136285721742907}
+    # ranking_scores_at_10: {'precision_at_10': 0.8937655283989139, 'recall_at_10': 0.5938712210786969, 'ndcg_at_10': 1.0, 'map_at_10': 1.0, 'map': 0.5938712210786972}
+    # ranking_scores_at_20: {'precision_at_20': 0.7236158057433407, 'recall_at_20': 0.7695308541544534, 'ndcg_at_20': 1.0, 'map_at_20': 1.0, 'map': 0.7695308541544527}
+    # ranking_scores_at_50: {'precision_at_50': 0.46414398798174156, 'recall_at_50': 0.9182487239618025, 'ndcg_at_50': 1.0, 'map_at_50': 1.0, 'map': 0.9182487239618027}
+    # ranking_scores_at_100: {'precision_at_100': 0.2935147628127344, 'recall_at_100': 0.9725313614950274, 'ndcg_at_100': 1.0, 'map_at_100': 1.0, 'map': 0.9725313614950267}
     print("rating_scores:", rating_scores)
+    print("ranking_scores_at_10:", ranking_scores_at_10)
     print("ranking_scores_at_20:", ranking_scores_at_20)
     print("ranking_scores_at_50:", ranking_scores_at_50)
     print("ranking_scores_at_100:", ranking_scores_at_100)
