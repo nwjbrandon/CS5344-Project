@@ -22,14 +22,14 @@ schema_movies = StructType(
 
 
 class MovieLens20m:
-    def __init__(self, spark, data_dir: str = "ml-20m") -> None:
+    def __init__(self, spark, data_dir: str = "ml-20m", movie_fname: str = "movies.csv", ratings_fname: str = "ratings.csv", delimiter: str = ",") -> None:
         self.spark = spark
-        self.movie_fname = os.path.join(data_dir, "movies.csv")
-        self.ratings_fname = os.path.join(data_dir, "ratings.csv")
+        self.movie_fname = os.path.join(data_dir, movie_fname)
+        self.ratings_fname = os.path.join(data_dir, ratings_fname)
 
         # Load datasets
-        self.movies_df = self.spark.read.option("header", True).option("delimiter", ",").schema(schema_movies).csv(self.movie_fname)
-        self.ratings_df = self.spark.read.option("header", True).option("delimiter", ",").schema(schema_ratings).csv(self.ratings_fname)
+        self.movies_df = self.spark.read.option("header", True).option("delimiter", delimiter).schema(schema_movies).csv(self.movie_fname)
+        self.ratings_df = self.spark.read.option("header", True).option("delimiter", delimiter).schema(schema_ratings).csv(self.ratings_fname)
 
     def get_movies_df(self):
         return self.movies_df
@@ -56,3 +56,8 @@ class MovieLens20m:
         df = df.withColumn("movie_age", current_year - df["released_year"])
         df = df.select(["movieID", "released_year", "movie_age"])
         return df
+
+
+class MovieLens10m(MovieLens20m):
+    def __init__(self, spark, data_dir: str = "ml-1m", movie_fname: str = "movies.dat", ratings_fname: str = "ratings.dat", delimiter: str = "::") -> None:
+        super().__init__(spark, data_dir, movie_fname, ratings_fname, delimiter)

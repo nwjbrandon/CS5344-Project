@@ -3,7 +3,7 @@ from pyspark.ml.recommendation import ALS
 from pyspark.sql import SparkSession
 
 from constants import DEFAULT_ITEM_COL, DEFAULT_PREDICTION_COL, DEFAULT_RATING_COL, DEFAULT_USER_COL, SEED
-from dataset import MovieLens20m
+from dataset import MovieLens20m, MovieLens10m
 from evaluation import SparkRankingEvaluation, SparkRatingEvaluation
 
 
@@ -139,10 +139,21 @@ def recommend_movies_by_matrix_factorization(movielens20m: MovieLens20m):
     train, test = df.randomSplit([0.75, 0.25], seed=SEED)
     mf.fit(train)
     scores = mf.evaluate(train, test)
+    # {
+    #    "rmse":0.8541491694857631,
+    #    "mae":0.6733607096222115,
+    #    "rsquared":0.4103068309160136,
+    #    "exp_var":0.41529677782043817,
+    #    "precision_at_10":0.0890317700453858,
+    #    "recall_at_10":0.02195435825280385,
+    #    "ndcg_at_10":0.08760641260277634,
+    #    "map_at_10":0.03867957711289533,
+    #    "map":0.0082320429578629
+    # }
     print(scores)
 
 
 if __name__ == "__main__":
     spark = SparkSession.builder.appName("CS5344 Project Matrix Factorization").getOrCreate()
-    movielens20m = MovieLens20m(spark=spark)
+    movielens20m = MovieLens10m(spark=spark)
     recommend_movies_by_matrix_factorization(movielens20m)

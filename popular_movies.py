@@ -2,7 +2,7 @@ import numpy as np
 import pyspark.sql.functions as F
 from pyspark.sql import SparkSession
 
-from dataset import MovieLens20m
+from dataset import MovieLens20m, MovieLens10m
 
 
 class PopularMovies:
