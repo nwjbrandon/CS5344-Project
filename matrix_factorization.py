@@ -2,7 +2,7 @@ import numpy as np
 from pyspark.ml.recommendation import ALS
 from pyspark.sql import SparkSession
 
-from constants import SEED
+from constants import DEFAULT_ITEM_COL, DEFAULT_PREDICTION_COL, DEFAULT_RATING_COL, DEFAULT_USER_COL, SEED
 from dataset import MovieLens20m
 from evaluation import SparkRankingEvaluation, SparkRatingEvaluation
 
@@ -27,8 +27,9 @@ class MatrixFactorization:
 
         self.als = ALS(
             rank=10,
-            maxIter=15,
+            maxIter=20,
             implicitPrefs=False,
+            alpha=0.1,
             regParam=0.05,
             coldStartStrategy="drop",
             nonnegative=False,
@@ -39,13 +40,78 @@ class MatrixFactorization:
         )
         self.model = None
 
-    def fit(self, df):
-        self.model = self.als.fit(df.select([self.user_col, self.item_col, self.rating_col]))
+    def fit(self, train):
+        self.model = self.als.fit(train.select([self.user_col, self.item_col, self.rating_col]))
 
-    def predict(self, df):
-        predictions = self.model.transform(df.select([self.user_col, self.item_col]))
-        predictions = predictions.join(df, [self.user_col, self.item_col])
+    def predict(self, test):
+        predictions = self.model.transform(test.select([self.user_col, self.item_col]))
+        predictions = predictions.join(test, [self.user_col, self.item_col])
         return predictions
+
+    def get_top_k_recommendations(self, train):
+        # Get the cross join of all user-item pairs and score them.
+        users = train.select(DEFAULT_USER_COL).distinct()
+        items = train.select(DEFAULT_ITEM_COL).distinct()
+        user_item = users.crossJoin(items)
+        dfs_pred = self.model.transform(user_item)
+
+        # Remove seen items
+        dfs_pred_exclude_train = dfs_pred.alias("pred").join(train.alias("train"), (dfs_pred[DEFAULT_USER_COL] == train[DEFAULT_USER_COL]) & (dfs_pred[DEFAULT_ITEM_COL] == train[DEFAULT_ITEM_COL]), how="outer")
+        top_k_recommendations = dfs_pred_exclude_train.filter(dfs_pred_exclude_train["train." + DEFAULT_RATING_COL].isNull()).select("pred." + DEFAULT_USER_COL, "pred." + DEFAULT_ITEM_COL, "pred." + DEFAULT_PREDICTION_COL)
+        return top_k_recommendations
+
+    def evaluate(self, train, test):
+        rating_scores = self.evaluate_rating(test)
+        ranking_scores_10 = self.evaluate_ranking(train, test, k=10)
+        # ranking_scores_20 = self.evaluate_ranking(train, test, k=20)
+        # ranking_scores_50 = self.evaluate_ranking(train, test, k=50)
+        # ranking_scores_100 = self.evaluate_ranking(train, test, k=100)
+        return {
+            **rating_scores,
+            **ranking_scores_10,
+            # **ranking_scores_20,
+            # **ranking_scores_50,
+            # **ranking_scores_100,
+        }
+
+    def evaluate_rating(self, test):
+        predictions = self.predict(test)
+        rating_true = predictions.select(["userId", "movieId", "rating"])
+        rating_pred = predictions.select(["userId", "movieId", "prediction"])
+
+        rating_evaluator = SparkRatingEvaluation(
+            rating_true,
+            rating_pred,
+            col_user="userId",
+            col_item="movieId",
+            col_rating="rating",
+            col_prediction="prediction",
+        )
+        return {
+            "rmse": rating_evaluator.rmse(),
+            "mae": rating_evaluator.mae(),
+            "rsquared": rating_evaluator.rsquared(),
+            "exp_var": rating_evaluator.exp_var(),
+        }
+
+    def evaluate_ranking(self, train, test, k):
+        top_k_recommendations = self.get_top_k_recommendations(train)
+        ranking_evaluator = SparkRankingEvaluation(
+            test,
+            top_k_recommendations,
+            col_user="userId",
+            col_item="movieId",
+            col_rating="rating",
+            col_prediction="prediction",
+            k=k,
+        )
+        return {
+            f"precision_at_{k}": ranking_evaluator.precision_at_k(),
+            f"recall_at_{k}": ranking_evaluator.recall_at_k(),
+            f"ndcg_at_{k}": ranking_evaluator.ndcg_at_k(),
+            f"map_at_{k}": ranking_evaluator.map_at_k(),
+            "map": ranking_evaluator.map(),
+        }
 
 
 def recommend_movies_by_matrix_factorization(movielens20m: MovieLens20m):
@@ -60,122 +126,17 @@ def recommend_movies_by_matrix_factorization(movielens20m: MovieLens20m):
     df = df.join(ratings_per_user_df, ["userID"])
     df = df.join(movie_age_df, ["movieID"])
 
-    df = df.filter(df["number_of_rating_per_movie"] >= 10)
+    df = df.filter(df["number_of_rating_per_movie"] >= 20)
     df = df.filter(df["number_of_rating_per_user"] >= 30)
     df = df.filter(df["movie_age"] != np.nan)
     df = df.filter(df["movie_age"] <= 100)
-
-    # 19332208
     df.show()
 
     mf = MatrixFactorization()
-    train, test = ratings_df.randomSplit([0.75, 0.25], seed=SEED)
-
+    train, test = df.randomSplit([0.75, 0.25], seed=SEED)
     mf.fit(train)
-    predictions = mf.predict(test)
-    # predictions = predictions.filter(predictions.prediction != np.nan)
-
-    rating_true = predictions.select(["userId", "movieId", "rating"])
-    rating_pred = predictions.select(["userId", "movieId", "prediction"])
-
-    # Rating
-    rating_evaluator = SparkRatingEvaluation(
-        rating_true,
-        rating_pred,
-        col_user="userId",
-        col_item="movieId",
-        col_rating="rating",
-        col_prediction="prediction",
-    )
-    rating_scores = {
-        "rmse": rating_evaluator.rmse(),
-        "mae": rating_evaluator.mae(),
-        "rsquared": rating_evaluator.rsquared(),
-        "exp_var": rating_evaluator.exp_var(),
-    }
-
-    # Ranking k = 10
-    ranking_evaluator = SparkRankingEvaluation(
-        rating_true,
-        rating_pred,
-        col_user="userId",
-        col_item="movieId",
-        col_rating="rating",
-        col_prediction="prediction",
-        k=10,
-    )
-    ranking_scores_at_10 = {
-        "precision_at_10": ranking_evaluator.precision_at_k(),
-        "recall_at_10": ranking_evaluator.recall_at_k(),
-        "ndcg_at_10": ranking_evaluator.ndcg_at_k(),
-        "map_at_10": ranking_evaluator.map_at_k(),
-        "map": ranking_evaluator.map(),
-    }
-
-    # Ranking k = 20
-    ranking_evaluator = SparkRankingEvaluation(
-        rating_true,
-        rating_pred,
-        col_user="userId",
-        col_item="movieId",
-        col_rating="rating",
-        col_prediction="prediction",
-        k=20,
-    )
-    ranking_scores_at_20 = {
-        "precision_at_20": ranking_evaluator.precision_at_k(),
-        "recall_at_20": ranking_evaluator.recall_at_k(),
-        "ndcg_at_20": ranking_evaluator.ndcg_at_k(),
-        "map_at_20": ranking_evaluator.map_at_k(),
-        "map": ranking_evaluator.map(),
-    }
-
-    # Ranking k = 50
-    ranking_evaluator = SparkRankingEvaluation(
-        rating_true,
-        rating_pred,
-        col_user="userId",
-        col_item="movieId",
-        col_rating="rating",
-        col_prediction="prediction",
-        k=50,
-    )
-    ranking_scores_at_50 = {
-        "precision_at_50": ranking_evaluator.precision_at_k(),
-        "recall_at_50": ranking_evaluator.recall_at_k(),
-        "ndcg_at_50": ranking_evaluator.ndcg_at_k(),
-        "map_at_50": ranking_evaluator.map_at_k(),
-        "map": ranking_evaluator.map(),
-    }
-
-    # Ranking k = 100
-    ranking_evaluator = SparkRankingEvaluation(
-        rating_true,
-        rating_pred,
-        col_user="userId",
-        col_item="movieId",
-        col_rating="rating",
-        col_prediction="prediction",
-        k=100,
-    )
-    ranking_scores_at_100 = {
-        "precision_at_100": ranking_evaluator.precision_at_k(),
-        "recall_at_100": ranking_evaluator.recall_at_k(),
-        "ndcg_at_100": ranking_evaluator.ndcg_at_k(),
-        "map_at_100": ranking_evaluator.map_at_k(),
-        "map": ranking_evaluator.map(),
-    }
-
-    # rating_scores: {'rmse': 0.7921513406842974, 'mae': 0.6115370079657217, 'rsquared': 0.4328377265483636, 'exp_var': 0.44136285721742907}
-    # ranking_scores_at_10: {'precision_at_10': 0.8937655283989139, 'recall_at_10': 0.5938712210786969, 'ndcg_at_10': 1.0, 'map_at_10': 1.0, 'map': 0.5938712210786972}
-    # ranking_scores_at_20: {'precision_at_20': 0.7236158057433407, 'recall_at_20': 0.7695308541544534, 'ndcg_at_20': 1.0, 'map_at_20': 1.0, 'map': 0.7695308541544527}
-    # ranking_scores_at_50: {'precision_at_50': 0.46414398798174156, 'recall_at_50': 0.9182487239618025, 'ndcg_at_50': 1.0, 'map_at_50': 1.0, 'map': 0.9182487239618027}
-    # ranking_scores_at_100: {'precision_at_100': 0.2935147628127344, 'recall_at_100': 0.9725313614950274, 'ndcg_at_100': 1.0, 'map_at_100': 1.0, 'map': 0.9725313614950267}
-    print("rating_scores:", rating_scores)
-    print("ranking_scores_at_10:", ranking_scores_at_10)
-    print("ranking_scores_at_20:", ranking_scores_at_20)
-    print("ranking_scores_at_50:", ranking_scores_at_50)
-    print("ranking_scores_at_100:", ranking_scores_at_100)
+    scores = mf.evaluate(train, test)
+    print(scores)
 
 
 if __name__ == "__main__":

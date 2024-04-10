@@ -28,8 +28,8 @@ class MovieLens20m:
         self.ratings_fname = os.path.join(data_dir, "ratings.csv")
 
         # Load datasets
-        self.movies_df = self.spark.read.option("header", True).schema(schema_movies).csv(self.movie_fname)
-        self.ratings_df = self.spark.read.option("header", True).schema(schema_ratings).csv(self.ratings_fname)
+        self.movies_df = self.spark.read.option("header", True).option("delimiter", ",").schema(schema_movies).csv(self.movie_fname)
+        self.ratings_df = self.spark.read.option("header", True).option("delimiter", ",").schema(schema_ratings).csv(self.ratings_fname)
 
     def get_movies_df(self):
         return self.movies_df
