@@ -3,8 +3,8 @@ from pyspark.ml.recommendation import ALS
 from pyspark.sql import SparkSession
 
 from constants import DEFAULT_ITEM_COL, DEFAULT_PREDICTION_COL, DEFAULT_RATING_COL, DEFAULT_USER_COL, SEED
-from dataset import MovieLens20m
-from evaluation import SparkRankingEvaluation, SparkRatingEvaluation
+from dataset import MovieLens1m, MovieLens20m
+from evaluation import SparkRankingEvaluation, SparkRatingEvaluation, SparkDiversityEvaluation
 
 
 class MatrixFactorization:
@@ -66,12 +66,14 @@ class MatrixFactorization:
     def evaluate(self, train, test):
         rating_scores = self.evaluate_rating(test)
         ranking_scores_10 = self.evaluate_ranking(train, test, k=10)
+        diversity_scores = self.evaluate_diversity(train, test)
         # ranking_scores_20 = self.evaluate_ranking(train, test, k=20)
         # ranking_scores_50 = self.evaluate_ranking(train, test, k=50)
         # ranking_scores_100 = self.evaluate_ranking(train, test, k=100)
         return {
             **rating_scores,
             **ranking_scores_10,
+            **diversity_scores,
             # **ranking_scores_20,
             # **ranking_scores_50,
             # **ranking_scores_100,
@@ -115,6 +117,21 @@ class MatrixFactorization:
             f"map_at_{k}": ranking_evaluator.map_at_k(),
             "map": ranking_evaluator.map(),
         }
+    def evaluate_diversity(self, train, test):
+        diversity_evaluator = SparkDiversityEvaluation(
+            train_df = train,
+            reco_df = test,
+            col_item = 'movieId',
+            col_user = 'userId'
+        )
+        return{
+            f"distributional_coverage" : diversity_evaluator.distributional_coverage(),
+            f"catalog_coverage": diversity_evaluator.catalog_coverage(),
+            f"serendipity": diversity_evaluator.serendipity(),
+            f"novelty": diversity_evaluator.novelty(),
+            f"diversity":diversity_evaluator.diversity()
+        }
+
 
 
 def recommend_movies_by_matrix_factorization(movielens20m: MovieLens20m):

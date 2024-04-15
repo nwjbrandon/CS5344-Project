@@ -1,1 +1,1 @@
-spark-submit --driver-memory 6G --executor-memory 1G matrix_factorization.py
+spark-submit --driver-memory 4G --executor-memory 1G matrix_factorization.py
