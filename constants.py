@@ -35,6 +35,7 @@ COL_DICT = {
 # Filtering variables
 DEFAULT_K = 10
 DEFAULT_THRESHOLD = 10
+TOP_K = 10
 
 # Other
 SEED = 42

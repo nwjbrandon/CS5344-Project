@@ -1,12 +1,14 @@
 import json
 
 import numpy as np
+import pyspark.sql.functions as F
 from pyspark.ml.recommendation import ALS
 from pyspark.sql import SparkSession
+from pyspark.sql.window import Window
 
-from constants import DEFAULT_ITEM_COL, DEFAULT_PREDICTION_COL, DEFAULT_RATING_COL, DEFAULT_USER_COL, SEED
-from dataset import MovieLens1m, MovieLens1m, MovieLens20m
-from evaluation import SparkRankingEvaluation, SparkRatingEvaluation, SparkDiversityEvaluation
+from constants import DEFAULT_ITEM_COL, DEFAULT_PREDICTION_COL, DEFAULT_RATING_COL, DEFAULT_USER_COL, SEED, TOP_K
+from dataset import MovieLens1m, MovieLens20m
+from evaluation import SparkDiversityEvaluation, SparkRankingEvaluation, SparkRatingEvaluation
 
 
 class MatrixFactorization:
@@ -62,23 +64,22 @@ class MatrixFactorization:
 
         # Remove seen items
         dfs_pred_exclude_train = dfs_pred.alias("pred").join(train.alias("train"), (dfs_pred[DEFAULT_USER_COL] == train[DEFAULT_USER_COL]) & (dfs_pred[DEFAULT_ITEM_COL] == train[DEFAULT_ITEM_COL]), how="outer")
-        top_k_recommendations = dfs_pred_exclude_train.filter(dfs_pred_exclude_train["train." + DEFAULT_RATING_COL].isNull()).select("pred." + DEFAULT_USER_COL, "pred." + DEFAULT_ITEM_COL, "pred." + DEFAULT_PREDICTION_COL)
-        return top_k_recommendations
+        top_all = dfs_pred_exclude_train.filter(dfs_pred_exclude_train["train." + DEFAULT_RATING_COL].isNull()).select("pred." + DEFAULT_USER_COL, "pred." + DEFAULT_ITEM_COL, "pred." + DEFAULT_PREDICTION_COL)
+
+        window = Window.partitionBy(DEFAULT_USER_COL).orderBy(F.col(DEFAULT_PREDICTION_COL).desc())
+        top_k = top_all.select("*", F.row_number().over(window).alias("rank")).filter(F.col("rank") <= TOP_K).drop("rank")
+
+        return top_all, top_k
 
     def evaluate(self, train, test):
+        top_all, top_k = self.get_top_k_recommendations(train)
         rating_scores = self.evaluate_rating(test)
-        ranking_scores_10 = self.evaluate_ranking(train, test, k=10)
-        diversity_scores = self.evaluate_diversity(train, test)
-        # ranking_scores_20 = self.evaluate_ranking(train, test, k=20)
-        # ranking_scores_50 = self.evaluate_ranking(train, test, k=50)
-        # ranking_scores_100 = self.evaluate_ranking(train, test, k=100)
+        ranking_scores_10 = self.evaluate_ranking(test, top_all)
+        diversity_scores = self.evaluate_diversity(train, top_k)
         return {
             **rating_scores,
             **ranking_scores_10,
             **diversity_scores,
-            # **ranking_scores_20,
-            # **ranking_scores_50,
-            # **ranking_scores_100,
         }
 
     def evaluate_rating(self, test):
@@ -101,11 +102,10 @@ class MatrixFactorization:
             "exp_var": rating_evaluator.exp_var(),
         }
 
-    def evaluate_ranking(self, train, test, k):
-        top_k_recommendations = self.get_top_k_recommendations(train)
+    def evaluate_ranking(self, test, pred, k=TOP_K):
         ranking_evaluator = SparkRankingEvaluation(
             test,
-            top_k_recommendations,
+            pred,
             col_user="userId",
             col_item="movieId",
             col_rating="rating",
@@ -119,21 +119,21 @@ class MatrixFactorization:
             f"map_at_{k}": ranking_evaluator.map_at_k(),
             "map": ranking_evaluator.map(),
         }
-    def evaluate_diversity(self, train, test):
-        diversity_evaluator = SparkDiversityEvaluation(
-            train_df = train,
-            reco_df = test,
-            col_item = 'movieId',
-            col_user = 'userId'
-        )
-        return{
-            f"distributional_coverage" : diversity_evaluator.distributional_coverage(),
-            f"catalog_coverage": diversity_evaluator.catalog_coverage(),
-            f"serendipity": diversity_evaluator.serendipity(),
-            f"novelty": diversity_evaluator.novelty(),
-            f"diversity":diversity_evaluator.diversity()
-        }
 
+    def evaluate_diversity(self, train, pred):
+        diversity_evaluator = SparkDiversityEvaluation(
+            train_df=train,
+            reco_df=pred,
+            col_item="movieId",
+            col_user="userId",
+        )
+        return {
+            "distributional_coverage": diversity_evaluator.distributional_coverage(),
+            "catalog_coverage": diversity_evaluator.catalog_coverage(),
+            "serendipity": diversity_evaluator.serendipity(),
+            "novelty": diversity_evaluator.novelty(),
+            "diversity": diversity_evaluator.diversity(),
+        }
 
 
 def recommend_movies_by_matrix_factorization(movielens20m: MovieLens20m):
@@ -164,5 +164,5 @@ def recommend_movies_by_matrix_factorization(movielens20m: MovieLens20m):
 
 if __name__ == "__main__":
     spark = SparkSession.builder.appName("CS5344 Project Matrix Factorization").getOrCreate()
-    movielens20m = MovieLens20m(spark=spark)
+    movielens20m = MovieLens1m(spark=spark)
     recommend_movies_by_matrix_factorization(movielens20m)
