@@ -185,6 +185,33 @@ Mean | 747.84
 +-------+--------------------+--------------------+----------------------------------+
 ```
 
+### Movie Recommendations By Genres
+- Search for similar movies by generes for new users (Action, Adventure, Sci-Fi etc)
+```
++-----------------------------------------------------+---------------------------+----------+
+|title                                                |genres                     |similarity|
++-----------------------------------------------------+---------------------------+----------+
+|Time Tracers (1995)                                  |[Action, Adventure, Sci-Fi]|1.0       |
+|Superman IV: The Quest for Peace (1987)              |[Action, Adventure, Sci-Fi]|1.0       |
+|Lost in Space (1998)                                 |[Action, Adventure, Sci-Fi]|1.0       |
+|Star Wars: Episode IV - A New Hope (1977)            |[Action, Adventure, Sci-Fi]|1.0       |
+|Rocketeer, The (1991)                                |[Action, Adventure, Sci-Fi]|1.0       |
+|Waterworld (1995)                                    |[Action, Adventure, Sci-Fi]|1.0       |
+|Tron (1982)                                          |[Action, Adventure, Sci-Fi]|1.0       |
+|Star Wars: Episode V - The Empire Strikes Back (1980)|[Action, Adventure, Sci-Fi]|1.0       |
+|Six-String Samurai (1998)                            |[Action, Adventure, Sci-Fi]|1.0       |
+|Logan's Run (1976)                                   |[Action, Adventure, Sci-Fi]|1.0       |
++-----------------------------------------------------+---------------------------+----------+
+```
+
+### Movie Recommendations With Matrix Factorization
+- Performance of Matrix Factorizations with and without removing users who gave and movies that received few ratings are shown below.
+- ALS (Preprocessed) has lower RMSE and variance, and higher ranking score in the recommendation after removing users who gave and movies that received few ratings.
+
+Model| RMSE | MAE | RSquared | ExpVar | Precision@10 | Recall@10 | NGCG@10 | MAP@10 | MAP
+--- | --- | --- | --- | --- | --- | --- | --- | --- | ---
+ALS (Original) | 0.86542 | 0.67617 | 0.28985 | 0.29011 | 0.02163 | 0.00382 | 0.01754 | 0.00556 |  0.00085
+ALS (Preprocessed) | 0.86113 | 0.67360 | 0.29501 | 0.29512 | 0.05303 | 0.00927 | 0.05141 | 0.02189 | 0.00333
 
 ## Issues
 - Solve java.lang.OutOfMemoryError: Java heap space (https://stackoverflow.com/questions/50842877/java-lang-outofmemoryerror-java-heap-space-using-docker)
