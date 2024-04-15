@@ -185,6 +185,14 @@ Mean | 747.84
 +-------+--------------------+--------------------+----------------------------------+
 ```
 
+### Movie Recommendations With Matrix Factorization
+- Performance of Matrix Factorizations with and without removing users who gave and movies that received few ratings are shown below.
+- ALS has lower RMSE and variance, and higher ranking score in the recommendation after removing users who gave and movies that received few ratings.
+
+Model| RMSE | MAE | RSquared | ExpVar | Precision@10 | Recall@10 | NGCG@10 | MAP@10 | MAP
+--- | --- | --- | --- | --- | --- | --- | --- | --- | ---
+ALS (Without Filtering) | 0.85567 | 0.67361 | 0.41222 | 0.41652 | 0.040669 | 0.01140 | 0.03371 | 0.01103 |  0.00277
+ALS (With Filtering) | 0.85415 | 0.67336 | 0.41031 | 0.41530 | 0.08903 | 0.02195 | 0.08761 | 0.03868 | 0.00823
 
 ## Issues
 - Solve java.lang.OutOfMemoryError: Java heap space (https://stackoverflow.com/questions/50842877/java-lang-outofmemoryerror-java-heap-space-using-docker)
