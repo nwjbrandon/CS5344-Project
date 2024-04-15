@@ -1,3 +1,5 @@
+import json
+
 import numpy as np
 from pyspark.ml.recommendation import ALS
 from pyspark.sql import SparkSession
@@ -133,13 +135,14 @@ def recommend_movies_by_matrix_factorization(movielens20m: MovieLens20m):
     df = df.filter(df["number_of_rating_per_user"] >= 30)
     df = df.filter(df["movie_age"] != np.nan)
     df = df.filter(df["movie_age"] <= 100)
+    df = df.withColumn("rating", df["rating"] - df["average_rating_per_user"])
     df.show()
 
     mf = MatrixFactorization()
     train, test = df.randomSplit([0.75, 0.25], seed=SEED)
     mf.fit(train)
     scores = mf.evaluate(train, test)
-    print(scores)
+    print(json.dumps(scores, indent=4))
 
 
 if __name__ == "__main__":
