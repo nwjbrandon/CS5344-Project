@@ -185,6 +185,25 @@ Mean | 747.84
 +-------+--------------------+--------------------+----------------------------------+
 ```
 
+### Movie Recommendations By Genres
+- Search for similar movies by generes for new users (Action, Adventure, Sci-Fi etc)
+```
++-----------------------------------------------------+---------------------------+----------+
+|title                                                |genres                     |similarity|
++-----------------------------------------------------+---------------------------+----------+
+|Time Tracers (1995)                                  |[Action, Adventure, Sci-Fi]|1.0       |
+|Superman IV: The Quest for Peace (1987)              |[Action, Adventure, Sci-Fi]|1.0       |
+|Lost in Space (1998)                                 |[Action, Adventure, Sci-Fi]|1.0       |
+|Star Wars: Episode IV - A New Hope (1977)            |[Action, Adventure, Sci-Fi]|1.0       |
+|Rocketeer, The (1991)                                |[Action, Adventure, Sci-Fi]|1.0       |
+|Waterworld (1995)                                    |[Action, Adventure, Sci-Fi]|1.0       |
+|Tron (1982)                                          |[Action, Adventure, Sci-Fi]|1.0       |
+|Star Wars: Episode V - The Empire Strikes Back (1980)|[Action, Adventure, Sci-Fi]|1.0       |
+|Six-String Samurai (1998)                            |[Action, Adventure, Sci-Fi]|1.0       |
+|Logan's Run (1976)                                   |[Action, Adventure, Sci-Fi]|1.0       |
++-----------------------------------------------------+---------------------------+----------+
+```
+
 ### Movie Recommendations With Matrix Factorization
 - Performance of Matrix Factorizations with and without removing users who gave and movies that received few ratings are shown below.
 - ALS has lower RMSE and variance, and higher ranking score in the recommendation after removing users who gave and movies that received few ratings.
