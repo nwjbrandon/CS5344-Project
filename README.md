@@ -208,10 +208,11 @@ Mean | 747.84
 - Performance of Matrix Factorizations with and without removing users who gave and movies that received few ratings are shown below.
 - ALS (Preprocessed) has lower RMSE and variance, and higher ranking score in the recommendation after removing users who gave and movies that received few ratings.
 
-Model| RMSE | MAE | RSquared | ExpVar | Precision@10 | Recall@10 | NGCG@10 | MAP@10 | MAP
---- | --- | --- | --- | --- | --- | --- | --- | --- | ---
-ALS (Original) | 0.86542 | 0.67617 | 0.28985 | 0.29011 | 0.02163 | 0.00382 | 0.01754 | 0.00556 |  0.00085
-ALS (Preprocessed) | 0.86113 | 0.67360 | 0.29501 | 0.29512 | 0.05303 | 0.00927 | 0.05141 | 0.02189 | 0.00333
+Model| RMSE | MAE | RSquared | ExpVar | Precision@10 | Recall@10 | NGCG@10 | MAP@10 | MAP | Distribution Coverage | Catalog Coverage | Serendipity | Novelty | Diversity
+--- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | ---
+ALS (Original) | 0.86542 | 0.67617 | 0.28985 | 0.29011 | 0.02163 | 0.00382 | 0.01754 | 0.00556 |  0.00085 | 8.22492 | 0.29523 | 0.94771 | 15.60224 | 0.96251
+ALS (Preprocessed) | 0.86113 | 0.67360 | 0.29501 | 0.29512 | 0.05303 | 0.00927 | 0.05141 | 0.02189 | 0.00333 | 8.47467 | 0.36603 | 0.90237 | 13.35040 | 0.91294
+
 
 ## Issues
 - Solve java.lang.OutOfMemoryError: Java heap space (https://stackoverflow.com/questions/50842877/java-lang-outofmemoryerror-java-heap-space-using-docker)

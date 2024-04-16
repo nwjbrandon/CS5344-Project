@@ -7,7 +7,7 @@ from pyspark.sql import SparkSession
 from pyspark.sql.window import Window
 
 from constants import DEFAULT_ITEM_COL, DEFAULT_PREDICTION_COL, DEFAULT_RATING_COL, DEFAULT_USER_COL, SEED, TOP_K
-from dataset import MovieLens1m, MovieLens20m
+from dataset import MovieLens1m, MovieLens20m, MovieLens100k
 from evaluation import SparkDiversityEvaluation, SparkRankingEvaluation, SparkRatingEvaluation
 
 
