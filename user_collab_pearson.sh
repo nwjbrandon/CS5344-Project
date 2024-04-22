@@ -1,0 +1,1 @@
+spark-submit --driver-memory 6G --executor-memory 1G user_collab_pearson.py
